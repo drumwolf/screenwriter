@@ -1,4 +1,6 @@
+import "dotenv/config";
 import express from "express";
+import { aiRouter } from "./routes/ai.js";
 import { scenesRouter } from "./routes/scenes.js";
 import { scriptsRouter } from "./routes/scripts.js";
 
@@ -11,6 +13,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/api/ai", aiRouter);
 app.use("/api/scripts", scriptsRouter);
 app.use("/api/scripts/:scriptId/scenes", scenesRouter);
 
