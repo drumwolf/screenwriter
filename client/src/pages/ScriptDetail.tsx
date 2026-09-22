@@ -13,6 +13,7 @@ interface Scene {
   id: string
   scriptId: string
   heading: string
+  title: string
   actionContext: string
   subtext: string
   createdAt: string
@@ -27,6 +28,7 @@ function ScriptDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [selection, setSelection] = useState<string | typeof NEW_SCENE | null>(null)
+  const [titleDraft, setTitleDraft] = useState('')
   const [headingDraft, setHeadingDraft] = useState('')
 
   useEffect(() => {
@@ -51,6 +53,7 @@ function ScriptDetail() {
   const selectedScene = scenes.find((scene) => scene.id === selection) ?? null
 
   useEffect(() => {
+    setTitleDraft(selectedScene?.title ?? '')
     setHeadingDraft(selectedScene?.heading ?? '')
   }, [selectedScene])
 
@@ -77,15 +80,15 @@ function ScriptDetail() {
     form.reset()
   }
 
-  async function handleHeadingBlur() {
+  async function saveField(field: 'title' | 'heading', value: string) {
     if (!id || !selectedScene) return
-    const heading = headingDraft.trim()
-    if (!heading || heading === selectedScene.heading) return
+    const trimmed = value.trim()
+    if (!trimmed || trimmed === selectedScene[field]) return
 
     const res = await fetch(`/api/scripts/${id}/scenes/${selectedScene.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ heading }),
+      body: JSON.stringify({ [field]: trimmed }),
     })
     if (!res.ok) return
 
@@ -112,7 +115,7 @@ function ScriptDetail() {
                 className={scene.id === selection ? 'scene-item active' : 'scene-item'}
                 onClick={() => setSelection(scene.id)}
               >
-                {scene.heading}
+                {scene.title}
               </button>
             </li>
           ))}
@@ -155,10 +158,18 @@ function ScriptDetail() {
         {selectedScene && (
           <div className="scene-view">
             <input
+              className="scene-title"
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={() => saveField('title', titleDraft)}
+              aria-label="Scene title"
+            />
+
+            <input
               className="scene-heading"
               value={headingDraft}
               onChange={(e) => setHeadingDraft(e.target.value)}
-              onBlur={handleHeadingBlur}
+              onBlur={() => saveField('heading', headingDraft)}
               aria-label="Scene heading"
             />
 

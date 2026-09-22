@@ -29,3 +29,9 @@ db.exec(`
     created_at TEXT NOT NULL
   )
 `);
+
+const sceneColumns = db.prepare("PRAGMA table_info(scenes)").all() as { name: string }[];
+if (!sceneColumns.some((col) => col.name === "title")) {
+  db.exec("ALTER TABLE scenes ADD COLUMN title TEXT NOT NULL DEFAULT ''");
+  db.exec("UPDATE scenes SET title = heading WHERE title = ''");
+}

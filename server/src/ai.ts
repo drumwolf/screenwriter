@@ -1,3 +1,39 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 export const anthropic = new Anthropic();
+
+const HEADING_FALLBACK = "UNTITLED SCENE";
+const TITLE_FALLBACK = "Untitled";
+
+export interface SceneMeta {
+  heading: string;
+  title: string;
+}
+
+export async function generateSceneMeta(actionContext: string): Promise<SceneMeta> {
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 60,
+      system:
+        "Given a description of what happens in a screenplay scene, reply with " +
+        "exactly two lines and nothing else:\n" +
+        "HEADING: a standard screenplay slugline, e.g. INT. LOCATION - TIME OF DAY\n" +
+        "TITLE: a short, human-readable label for the scene (5-8 words), the kind " +
+        "a writer would use to find this scene in a list — naming the characters " +
+        "and what's happening, not the location/time format.",
+      messages: [{ role: "user", content: actionContext }],
+    });
+
+    const text = response.content.find((block) => block.type === "text")?.text ?? "";
+    const headingMatch = text.match(/HEADING:\s*(.+)/i);
+    const titleMatch = text.match(/TITLE:\s*(.+)/i);
+
+    return {
+      heading: headingMatch?.[1]?.trim() || HEADING_FALLBACK,
+      title: titleMatch?.[1]?.trim() || TITLE_FALLBACK,
+    };
+  } catch {
+    return { heading: HEADING_FALLBACK, title: TITLE_FALLBACK };
+  }
+}

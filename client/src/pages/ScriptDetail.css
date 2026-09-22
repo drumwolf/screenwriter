@@ -111,18 +111,31 @@
   cursor: pointer;
 }
 
+.scene-title,
 .scene-heading {
-  font-size: 1.4rem;
-  font-weight: 500;
-  color: var(--text-h);
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 4px 8px;
-  margin: -4px 0 8px -8px;
+  margin: 0 0 0 -8px;
   background: none;
+  color: var(--text-h);
   font-family: inherit;
 }
 
+.scene-title {
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+.scene-heading {
+  font-size: 0.85rem;
+  font-family: var(--mono);
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.scene-title:hover,
+.scene-title:focus,
 .scene-heading:hover,
 .scene-heading:focus {
   border-color: var(--border);

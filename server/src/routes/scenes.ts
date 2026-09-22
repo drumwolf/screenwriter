@@ -1,30 +1,33 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
+import { generateSceneMeta } from "../ai.js";
 import { db } from "../db.js";
 
 interface Scene {
   id: string;
   scriptId: string;
   heading: string;
+  title: string;
   actionContext: string;
   subtext: string;
   createdAt: string;
 }
+
+const SCENE_COLUMNS =
+  "id, script_id AS scriptId, heading, title, action_context AS actionContext, subtext, created_at AS createdAt";
 
 export const scenesRouter = Router({ mergeParams: true });
 
 scenesRouter.get("/", (req, res) => {
   const { scriptId } = req.params as { scriptId: string };
   const scenes = db
-    .prepare(
-      "SELECT id, script_id AS scriptId, heading, action_context AS actionContext, subtext, created_at AS createdAt FROM scenes WHERE script_id = ? ORDER BY created_at ASC",
-    )
+    .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE script_id = ? ORDER BY created_at ASC`)
     .all(scriptId) as Scene[];
 
   res.json(scenes);
 });
 
-scenesRouter.post("/", (req, res) => {
+scenesRouter.post("/", async (req, res) => {
   const { actionContext, subtext } = req.body;
   const { scriptId } = req.params as { scriptId: string };
 
@@ -47,19 +50,31 @@ scenesRouter.post("/", (req, res) => {
     return;
   }
 
+  const trimmedActionContext = actionContext.trim();
+  const { heading, title } = await generateSceneMeta(trimmedActionContext);
+
   const now = new Date().toISOString();
   const scene: Scene = {
     id: randomUUID(),
     scriptId,
-    heading: "UNTITLED SCENE",
-    actionContext: actionContext.trim(),
+    heading,
+    title,
+    actionContext: trimmedActionContext,
     subtext: subtext.trim(),
     createdAt: now,
   };
 
   db.prepare(
-    "INSERT INTO scenes (id, script_id, heading, action_context, subtext, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run(scene.id, scene.scriptId, scene.heading, scene.actionContext, scene.subtext, scene.createdAt);
+    "INSERT INTO scenes (id, script_id, heading, title, action_context, subtext, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  ).run(
+    scene.id,
+    scene.scriptId,
+    scene.heading,
+    scene.title,
+    scene.actionContext,
+    scene.subtext,
+    scene.createdAt,
+  );
 
   db.prepare(
     "UPDATE scripts SET scene_count = scene_count + 1, last_edited = ? WHERE id = ?",
@@ -69,21 +84,38 @@ scenesRouter.post("/", (req, res) => {
 });
 
 scenesRouter.patch("/:id", (req, res) => {
-  const { heading } = req.body;
+  const { heading, title } = req.body;
   const { scriptId, id } = req.params as { scriptId: string; id: string };
 
-  if (typeof heading !== "string" || heading.trim() === "") {
-    res.status(400).json({ error: "heading is required" });
+  if (heading === undefined && title === undefined) {
+    res.status(400).json({ error: "heading or title is required" });
     return;
   }
 
-  const result = db
-    .prepare("UPDATE scenes SET heading = ? WHERE id = ? AND script_id = ?")
-    .run(heading.trim(), id, scriptId);
+  if (heading !== undefined && (typeof heading !== "string" || heading.trim() === "")) {
+    res.status(400).json({ error: "heading must be a non-empty string" });
+    return;
+  }
 
-  if (result.changes === 0) {
+  if (title !== undefined && (typeof title !== "string" || title.trim() === "")) {
+    res.status(400).json({ error: "title must be a non-empty string" });
+    return;
+  }
+
+  const existing = db
+    .prepare("SELECT id FROM scenes WHERE id = ? AND script_id = ?")
+    .get(id, scriptId);
+
+  if (!existing) {
     res.status(404).json({ error: "scene not found" });
     return;
+  }
+
+  if (heading !== undefined) {
+    db.prepare("UPDATE scenes SET heading = ? WHERE id = ?").run(heading.trim(), id);
+  }
+  if (title !== undefined) {
+    db.prepare("UPDATE scenes SET title = ? WHERE id = ?").run(title.trim(), id);
   }
 
   db.prepare("UPDATE scripts SET last_edited = ? WHERE id = ?").run(
@@ -91,11 +123,7 @@ scenesRouter.patch("/:id", (req, res) => {
     scriptId,
   );
 
-  const scene = db
-    .prepare(
-      "SELECT id, script_id AS scriptId, heading, action_context AS actionContext, subtext, created_at AS createdAt FROM scenes WHERE id = ?",
-    )
-    .get(id) as Scene;
+  const scene = db.prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE id = ?`).get(id) as Scene;
 
   res.json(scene);
 });
