@@ -1,0 +1,135 @@
+.script-detail {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  text-align: left;
+}
+
+.scene-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.back-link {
+  color: var(--text);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--text-h);
+}
+
+.scene-sidebar h2 {
+  margin: 4px 0 8px;
+}
+
+.scene-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.scene-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.scene-item:hover {
+  background: var(--code-bg);
+}
+
+.scene-item.active {
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.new-scene-button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-h);
+  font: inherit;
+  cursor: pointer;
+}
+
+.scene-main {
+  flex: 1;
+  padding: 24px 32px;
+  max-width: 720px;
+}
+
+.new-scene-form,
+.scene-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.new-scene-form label,
+.scene-field h3 {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: 0;
+}
+
+.new-scene-form textarea {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  resize: vertical;
+}
+
+.new-scene-form button {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.scene-heading {
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--text-h);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin: -4px 0 8px -8px;
+  background: none;
+  font-family: inherit;
+}
+
+.scene-heading:hover,
+.scene-heading:focus {
+  border-color: var(--border);
+  background: var(--code-bg);
+}
+
+.scene-field p {
+  color: var(--text-h);
+  white-space: pre-wrap;
+}

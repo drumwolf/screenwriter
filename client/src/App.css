@@ -1,4 +1,4 @@
-main {
+.page-narrow {
   max-width: 640px;
   margin: 0 auto;
   padding: 32px 20px 64px;
@@ -15,13 +15,18 @@ main {
 }
 
 .script-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.script-link {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 16px;
   padding: 12px 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
 }
 
 .script-title {
