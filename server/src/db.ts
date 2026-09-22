@@ -18,3 +18,14 @@ db.exec(`
     last_edited TEXT NOT NULL
   )
 `);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS scenes (
+    id TEXT PRIMARY KEY,
+    script_id TEXT NOT NULL REFERENCES scripts(id),
+    heading TEXT NOT NULL,
+    action_context TEXT NOT NULL,
+    subtext TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )
+`);

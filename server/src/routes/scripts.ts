@@ -21,6 +21,21 @@ scriptsRouter.get("/", (_req, res) => {
   res.json(scripts);
 });
 
+scriptsRouter.get("/:id", (req, res) => {
+  const script = db
+    .prepare(
+      "SELECT id, title, scene_count AS sceneCount, last_edited AS lastEdited FROM scripts WHERE id = ?",
+    )
+    .get(req.params.id) as Script | undefined;
+
+  if (!script) {
+    res.status(404).json({ error: "script not found" });
+    return;
+  }
+
+  res.json(script);
+});
+
 scriptsRouter.post("/", (req, res) => {
   const { title } = req.body;
 

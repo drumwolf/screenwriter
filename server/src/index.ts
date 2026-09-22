@@ -1,4 +1,5 @@
 import express from "express";
+import { scenesRouter } from "./routes/scenes.js";
 import { scriptsRouter } from "./routes/scripts.js";
 
 const app = express();
@@ -11,6 +12,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/scripts", scriptsRouter);
+app.use("/api/scripts/:scriptId/scenes", scenesRouter);
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
