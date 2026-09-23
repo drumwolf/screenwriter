@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
-import { draftScene, generateSceneMeta } from "../ai.js";
+import { draftScene, generateSceneMeta, type SceneCharacter } from "../ai.js";
 import { db } from "../db.js";
 
 interface Scene {
@@ -132,6 +132,28 @@ scenesRouter.patch("/:id", (req, res) => {
   res.json(scene);
 });
 
+function getSceneCharacters(sceneId: string): SceneCharacter[] {
+  const characters = db
+    .prepare(
+      `SELECT c.id, c.name, c.note
+       FROM scene_characters sc
+       JOIN characters c ON c.id = sc.character_id
+       WHERE sc.scene_id = ?
+       ORDER BY c.created_at ASC`,
+    )
+    .all(sceneId) as { id: string; name: string; note: string }[];
+
+  const entriesStmt = db.prepare(
+    "SELECT content FROM character_entries WHERE character_id = ? ORDER BY created_at ASC",
+  );
+
+  return characters.map((character) => ({
+    name: character.name,
+    note: character.note,
+    entries: (entriesStmt.all(character.id) as { content: string }[]).map((e) => e.content),
+  }));
+}
+
 scenesRouter.post("/:id/draft", async (req, res) => {
   const { scriptId, id } = req.params as { scriptId: string; id: string };
 
@@ -149,6 +171,7 @@ scenesRouter.post("/:id/draft", async (req, res) => {
       heading: scene.heading,
       actionContext: scene.actionContext,
       subtext: scene.subtext,
+      characters: getSceneCharacters(id),
     });
 
     db.prepare("UPDATE scenes SET draft = ? WHERE id = ?").run(draft, id);

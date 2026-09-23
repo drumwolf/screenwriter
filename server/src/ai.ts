@@ -38,10 +38,36 @@ export async function generateSceneMeta(actionContext: string): Promise<SceneMet
   }
 }
 
+export interface SceneCharacter {
+  name: string;
+  note: string;
+  entries: string[];
+}
+
+function formatCharacters(characters: SceneCharacter[]): string {
+  if (characters.length === 0) return "";
+
+  const blocks = characters.map((character) => {
+    const lines = [`${character.name}${character.note ? ` — ${character.note}` : ""}`];
+    for (const entry of character.entries) {
+      lines.push(`  - ${entry}`);
+    }
+    return lines.join("\n");
+  });
+
+  return (
+    "\n\nCHARACTERS IN THIS SCENE (use these exact names; stay consistent with " +
+    "these established details — they take priority over anything you'd " +
+    "otherwise assume about the character):\n" +
+    blocks.join("\n\n")
+  );
+}
+
 export async function draftScene(params: {
   heading: string;
   actionContext: string;
   subtext: string;
+  characters?: SceneCharacter[];
 }): Promise<string> {
   const response = await anthropic.messages.create({
     model: "claude-opus-5",
@@ -49,16 +75,18 @@ export async function draftScene(params: {
     system:
       "You draft screenplay scenes: action lines and dialogue in standard " +
       "screenplay format (character names in caps above their lines). You're " +
-      "given a scene heading, what physically happens (action/context), and " +
-      "the subtext — what's really going on underneath, unspoken. Write only " +
-      "the scene itself, nothing else — no preamble, no notes.",
+      "given a scene heading, what physically happens (action/context), the " +
+      "subtext — what's really going on underneath, unspoken — and, when " +
+      "available, established details about the characters in the scene. " +
+      "Write only the scene itself, nothing else — no preamble, no notes.",
     messages: [
       {
         role: "user",
         content:
           `HEADING: ${params.heading}\n\n` +
           `ACTION/CONTEXT: ${params.actionContext}\n\n` +
-          `SUBTEXT: ${params.subtext}`,
+          `SUBTEXT: ${params.subtext}` +
+          formatCharacters(params.characters ?? []),
       },
     ],
   });
