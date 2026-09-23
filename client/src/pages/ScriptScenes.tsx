@@ -10,6 +10,7 @@ interface Scene {
   title: string
   actionContext: string
   subtext: string
+  draft: string
   createdAt: string
 }
 
@@ -23,6 +24,7 @@ function ScriptScenes() {
   const [selection, setSelection] = useState<string | typeof NEW_SCENE | null>(null)
   const [titleDraft, setTitleDraft] = useState('')
   const [headingDraft, setHeadingDraft] = useState('')
+  const [drafting, setDrafting] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -81,6 +83,22 @@ function ScriptScenes() {
 
     const updated: Scene = await res.json()
     setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
+  }
+
+  async function handleDraft() {
+    if (!id || !selectedScene) return
+    setDrafting(true)
+    try {
+      const res = await fetch(`/api/scripts/${id}/scenes/${selectedScene.id}/draft`, {
+        method: 'POST',
+      })
+      if (!res.ok) return
+
+      const updated: Scene = await res.json()
+      setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
+    } finally {
+      setDrafting(false)
+    }
   }
 
   if (loading) return <p className="split-main">Loading…</p>
@@ -164,6 +182,17 @@ function ScriptScenes() {
               <h3>Subtext</h3>
               <p>{selectedScene.subtext}</p>
             </div>
+
+            <button type="button" onClick={handleDraft} disabled={drafting} className="draft-button">
+              {drafting ? 'Drafting…' : selectedScene.draft ? 'Redraft Scene' : 'Draft Scene'}
+            </button>
+
+            {selectedScene.draft && (
+              <div className="scene-field">
+                <h3>Draft</h3>
+                <p className="scene-draft">{selectedScene.draft}</p>
+              </div>
+            )}
           </div>
         )}
 

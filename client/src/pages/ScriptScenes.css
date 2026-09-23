@@ -68,3 +68,28 @@
   color: var(--text-h);
   white-space: pre-wrap;
 }
+
+.draft-button {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-h);
+  font: inherit;
+  cursor: pointer;
+}
+
+.draft-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.scene-draft {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  background: var(--code-bg);
+  padding: 16px;
+  border-radius: 8px;
+}

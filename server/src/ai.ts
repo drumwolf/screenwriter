@@ -37,3 +37,31 @@ export async function generateSceneMeta(actionContext: string): Promise<SceneMet
     return { heading: HEADING_FALLBACK, title: TITLE_FALLBACK };
   }
 }
+
+export async function draftScene(params: {
+  heading: string;
+  actionContext: string;
+  subtext: string;
+}): Promise<string> {
+  const response = await anthropic.messages.create({
+    model: "claude-opus-5",
+    max_tokens: 4096,
+    system:
+      "You draft screenplay scenes: action lines and dialogue in standard " +
+      "screenplay format (character names in caps above their lines). You're " +
+      "given a scene heading, what physically happens (action/context), and " +
+      "the subtext — what's really going on underneath, unspoken. Write only " +
+      "the scene itself, nothing else — no preamble, no notes.",
+    messages: [
+      {
+        role: "user",
+        content:
+          `HEADING: ${params.heading}\n\n` +
+          `ACTION/CONTEXT: ${params.actionContext}\n\n` +
+          `SUBTEXT: ${params.subtext}`,
+      },
+    ],
+  });
+
+  return response.content.find((block) => block.type === "text")?.text?.trim() ?? "";
+}

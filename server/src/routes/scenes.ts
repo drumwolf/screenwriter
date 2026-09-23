@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
-import { generateSceneMeta } from "../ai.js";
+import { draftScene, generateSceneMeta } from "../ai.js";
 import { db } from "../db.js";
 
 interface Scene {
@@ -10,11 +10,12 @@ interface Scene {
   title: string;
   actionContext: string;
   subtext: string;
+  draft: string;
   createdAt: string;
 }
 
 const SCENE_COLUMNS =
-  "id, script_id AS scriptId, heading, title, action_context AS actionContext, subtext, created_at AS createdAt";
+  "id, script_id AS scriptId, heading, title, action_context AS actionContext, subtext, draft, created_at AS createdAt";
 
 export const scenesRouter = Router({ mergeParams: true });
 
@@ -61,6 +62,7 @@ scenesRouter.post("/", async (req, res) => {
     title,
     actionContext: trimmedActionContext,
     subtext: subtext.trim(),
+    draft: "",
     createdAt: now,
   };
 
@@ -126,4 +128,35 @@ scenesRouter.patch("/:id", (req, res) => {
   const scene = db.prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE id = ?`).get(id) as Scene;
 
   res.json(scene);
+});
+
+scenesRouter.post("/:id/draft", async (req, res) => {
+  const { scriptId, id } = req.params as { scriptId: string; id: string };
+
+  const scene = db
+    .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE id = ? AND script_id = ?`)
+    .get(id, scriptId) as Scene | undefined;
+
+  if (!scene) {
+    res.status(404).json({ error: "scene not found" });
+    return;
+  }
+
+  try {
+    const draft = await draftScene({
+      heading: scene.heading,
+      actionContext: scene.actionContext,
+      subtext: scene.subtext,
+    });
+
+    db.prepare("UPDATE scenes SET draft = ? WHERE id = ?").run(draft, id);
+    db.prepare("UPDATE scripts SET last_edited = ? WHERE id = ?").run(
+      new Date().toISOString(),
+      scriptId,
+    );
+
+    res.json({ ...scene, draft });
+  } catch (err) {
+    res.status(502).json({ error: (err as Error).message });
+  }
 });
