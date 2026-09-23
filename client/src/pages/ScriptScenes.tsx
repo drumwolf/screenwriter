@@ -14,6 +14,14 @@ interface Scene {
   createdAt: string
 }
 
+interface Character {
+  id: string
+  scriptId: string
+  name: string
+  note: string
+  createdAt: string
+}
+
 const NEW_SCENE = 'new' as const
 
 function ScriptScenes() {
@@ -27,14 +35,19 @@ function ScriptScenes() {
   const [actionContextDraft, setActionContextDraft] = useState('')
   const [subtextDraft, setSubtextDraft] = useState('')
   const [drafting, setDrafting] = useState(false)
+  const [characters, setCharacters] = useState<Character[]>([])
+  const [linkedCharacterIds, setLinkedCharacterIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!id) return
 
-    fetch(`/api/scripts/${id}/scenes`)
-      .then((res) => res.json())
-      .then((sceneData: Scene[]) => {
+    Promise.all([
+      fetch(`/api/scripts/${id}/scenes`).then((res) => res.json()),
+      fetch(`/api/scripts/${id}/characters`).then((res) => res.json()),
+    ])
+      .then(([sceneData, characterData]: [Scene[], Character[]]) => {
         setScenes(sceneData)
+        setCharacters(characterData)
         setSelection(sceneData.length > 0 ? sceneData[0].id : NEW_SCENE)
       })
       .catch(() => setError(true))
@@ -48,7 +61,16 @@ function ScriptScenes() {
     setHeadingDraft(selectedScene?.heading ?? '')
     setActionContextDraft(selectedScene?.actionContext ?? '')
     setSubtextDraft(selectedScene?.subtext ?? '')
-  }, [selectedScene])
+
+    if (!id || !selectedScene) {
+      setLinkedCharacterIds(new Set())
+      return
+    }
+
+    fetch(`/api/scripts/${id}/scenes/${selectedScene.id}/characters`)
+      .then((res) => res.json())
+      .then((linked: Character[]) => setLinkedCharacterIds(new Set(linked.map((c) => c.id))))
+  }, [id, selectedScene])
 
   async function handleCreateScene(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -87,6 +109,24 @@ function ScriptScenes() {
 
     const updated: Scene = await res.json()
     setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
+  }
+
+  async function toggleCharacter(characterId: string) {
+    if (!id || !selectedScene) return
+
+    const next = new Set(linkedCharacterIds)
+    if (next.has(characterId)) {
+      next.delete(characterId)
+    } else {
+      next.add(characterId)
+    }
+    setLinkedCharacterIds(next)
+
+    await fetch(`/api/scripts/${id}/scenes/${selectedScene.id}/characters`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ characterIds: [...next] }),
+    })
   }
 
   async function handleDraft() {
@@ -199,6 +239,25 @@ function ScriptScenes() {
                 rows={3}
                 aria-label="Subtext"
               />
+            </div>
+
+            <div className="scene-field">
+              <h3>Characters in this scene</h3>
+              {characters.length === 0 && <p>No characters yet — add some on the Characters tab.</p>}
+              <ul className="character-checklist">
+                {characters.map((character) => (
+                  <li key={character.id}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={linkedCharacterIds.has(character.id)}
+                        onChange={() => toggleCharacter(character.id)}
+                      />
+                      {character.name}
+                    </label>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             <button type="button" onClick={handleDraft} disabled={drafting} className="draft-button">

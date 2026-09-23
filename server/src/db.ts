@@ -58,3 +58,11 @@ db.exec(`
     created_at TEXT NOT NULL
   )
 `);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS scene_characters (
+    scene_id TEXT NOT NULL REFERENCES scenes(id),
+    character_id TEXT NOT NULL REFERENCES characters(id),
+    PRIMARY KEY (scene_id, character_id)
+  )
+`);

@@ -3,6 +3,7 @@ import express from "express";
 import { aiRouter } from "./routes/ai.js";
 import { characterEntriesRouter } from "./routes/characterEntries.js";
 import { charactersRouter } from "./routes/characters.js";
+import { sceneCharactersRouter } from "./routes/sceneCharacters.js";
 import { scenesRouter } from "./routes/scenes.js";
 import { scriptsRouter } from "./routes/scripts.js";
 
@@ -18,6 +19,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/ai", aiRouter);
 app.use("/api/scripts", scriptsRouter);
 app.use("/api/scripts/:scriptId/scenes", scenesRouter);
+app.use("/api/scripts/:scriptId/scenes/:sceneId/characters", sceneCharactersRouter);
 app.use("/api/scripts/:scriptId/characters", charactersRouter);
 app.use("/api/scripts/:scriptId/characters/:characterId/entries", characterEntriesRouter);
 
