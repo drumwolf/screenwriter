@@ -35,3 +35,23 @@ if (!sceneColumns.some((col) => col.name === "title")) {
   db.exec("ALTER TABLE scenes ADD COLUMN title TEXT NOT NULL DEFAULT ''");
   db.exec("UPDATE scenes SET title = heading WHERE title = ''");
 }
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS characters (
+    id TEXT PRIMARY KEY,
+    script_id TEXT NOT NULL REFERENCES scripts(id),
+    name TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS character_entries (
+    id TEXT PRIMARY KEY,
+    character_id TEXT NOT NULL REFERENCES characters(id),
+    content TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'manual',
+    created_at TEXT NOT NULL
+  )
+`);
