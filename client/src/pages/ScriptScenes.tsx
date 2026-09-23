@@ -131,12 +131,21 @@ function ScriptScenes() {
 
   async function handleDraft() {
     if (!id || !selectedScene) return
+    const sceneId = selectedScene.id
+    const previousDraft = selectedScene.draft
+
     setDrafting(true)
+    setScenes((prev) => prev.map((scene) => (scene.id === sceneId ? { ...scene, draft: '' } : scene)))
     try {
-      const res = await fetch(`/api/scripts/${id}/scenes/${selectedScene.id}/draft`, {
+      const res = await fetch(`/api/scripts/${id}/scenes/${sceneId}/draft`, {
         method: 'POST',
       })
-      if (!res.ok) return
+      if (!res.ok) {
+        setScenes((prev) =>
+          prev.map((scene) => (scene.id === sceneId ? { ...scene, draft: previousDraft } : scene)),
+        )
+        return
+      }
 
       const updated: Scene = await res.json()
       setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
