@@ -1,0 +1,47 @@
+.script-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.script-page-header {
+  padding: 20px 16px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.back-link {
+  color: var(--text);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--text-h);
+}
+
+.script-page-header h2 {
+  margin: 4px 0 12px;
+}
+
+.script-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.script-tabs a {
+  padding: 8px 12px;
+  border-bottom: 2px solid transparent;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.script-tabs a:hover {
+  color: var(--text-h);
+}
+
+.script-tabs a.active {
+  color: var(--text-h);
+  border-bottom-color: var(--accent);
+}

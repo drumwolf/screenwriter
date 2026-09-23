@@ -1,0 +1,63 @@
+.split-view {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  text-align: left;
+}
+
+.split-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.split-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.split-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.split-item:hover {
+  background: var(--code-bg);
+}
+
+.split-item.active {
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.split-add-button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-h);
+  font: inherit;
+  cursor: pointer;
+}
+
+.split-main {
+  flex: 1;
+  padding: 24px 32px;
+  max-width: 720px;
+}

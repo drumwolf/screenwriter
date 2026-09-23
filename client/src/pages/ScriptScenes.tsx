@@ -1,13 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import './ScriptDetail.css'
-
-interface Script {
-  id: string
-  title: string
-  sceneCount: number
-  lastEdited: string
-}
+import { useParams } from 'react-router-dom'
+import './ScriptScenes.css'
+import './SplitView.css'
 
 interface Scene {
   id: string
@@ -21,9 +15,8 @@ interface Scene {
 
 const NEW_SCENE = 'new' as const
 
-function ScriptDetail() {
+function ScriptScenes() {
   const { id } = useParams<{ id: string }>()
-  const [script, setScript] = useState<Script | null>(null)
   const [scenes, setScenes] = useState<Scene[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -34,15 +27,9 @@ function ScriptDetail() {
   useEffect(() => {
     if (!id) return
 
-    Promise.all([
-      fetch(`/api/scripts/${id}`).then((res) => {
-        if (!res.ok) throw new Error('not found')
-        return res.json()
-      }),
-      fetch(`/api/scripts/${id}/scenes`).then((res) => res.json()),
-    ])
-      .then(([scriptData, sceneData]: [Script, Scene[]]) => {
-        setScript(scriptData)
+    fetch(`/api/scripts/${id}/scenes`)
+      .then((res) => res.json())
+      .then((sceneData: Scene[]) => {
         setScenes(sceneData)
         setSelection(sceneData.length > 0 ? sceneData[0].id : NEW_SCENE)
       })
@@ -96,23 +83,18 @@ function ScriptDetail() {
     setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
   }
 
-  if (loading) return <p className="page-narrow">Loading…</p>
-  if (error || !script) return <p className="page-narrow" role="alert">Couldn't load this script.</p>
+  if (loading) return <p className="split-main">Loading…</p>
+  if (error) return <p className="split-main" role="alert">Couldn't load scenes.</p>
 
   return (
-    <main className="script-detail">
-      <aside className="scene-sidebar">
-        <Link to="/" className="back-link">
-          ← All Scripts
-        </Link>
-        <h2>{script.title}</h2>
-
-        <ul className="scene-list">
+    <div className="split-view">
+      <aside className="split-sidebar">
+        <ul className="split-list">
           {scenes.map((scene) => (
             <li key={scene.id}>
               <button
                 type="button"
-                className={scene.id === selection ? 'scene-item active' : 'scene-item'}
+                className={scene.id === selection ? 'split-item active' : 'split-item'}
                 onClick={() => setSelection(scene.id)}
               >
                 {scene.title}
@@ -123,14 +105,14 @@ function ScriptDetail() {
 
         <button
           type="button"
-          className="new-scene-button"
+          className="split-add-button"
           onClick={() => setSelection(NEW_SCENE)}
         >
           + New Scene
         </button>
       </aside>
 
-      <section className="scene-main">
+      <section className="split-main">
         {selection === NEW_SCENE && (
           <form onSubmit={handleCreateScene} className="new-scene-form">
             <label htmlFor="actionContext">Action / context</label>
@@ -189,8 +171,8 @@ function ScriptDetail() {
           <p>No scenes yet. Use "+ New Scene" to start one.</p>
         )}
       </section>
-    </main>
+    </div>
   )
 }
 
-export default ScriptDetail
+export default ScriptScenes
