@@ -85,23 +85,28 @@ scenesRouter.post("/", async (req, res) => {
   res.status(201).json(scene);
 });
 
+const EDITABLE_FIELDS: Record<string, string> = {
+  heading: "heading",
+  title: "title",
+  actionContext: "action_context",
+  subtext: "subtext",
+};
+
 scenesRouter.patch("/:id", (req, res) => {
-  const { heading, title } = req.body;
   const { scriptId, id } = req.params as { scriptId: string; id: string };
+  const updates = Object.entries(EDITABLE_FIELDS).filter(([field]) => req.body[field] !== undefined);
 
-  if (heading === undefined && title === undefined) {
-    res.status(400).json({ error: "heading or title is required" });
+  if (updates.length === 0) {
+    res.status(400).json({ error: `at least one of ${Object.keys(EDITABLE_FIELDS).join(", ")} is required` });
     return;
   }
 
-  if (heading !== undefined && (typeof heading !== "string" || heading.trim() === "")) {
-    res.status(400).json({ error: "heading must be a non-empty string" });
-    return;
-  }
-
-  if (title !== undefined && (typeof title !== "string" || title.trim() === "")) {
-    res.status(400).json({ error: "title must be a non-empty string" });
-    return;
+  for (const [field] of updates) {
+    const value = req.body[field];
+    if (typeof value !== "string" || value.trim() === "") {
+      res.status(400).json({ error: `${field} must be a non-empty string` });
+      return;
+    }
   }
 
   const existing = db
@@ -113,11 +118,8 @@ scenesRouter.patch("/:id", (req, res) => {
     return;
   }
 
-  if (heading !== undefined) {
-    db.prepare("UPDATE scenes SET heading = ? WHERE id = ?").run(heading.trim(), id);
-  }
-  if (title !== undefined) {
-    db.prepare("UPDATE scenes SET title = ? WHERE id = ?").run(title.trim(), id);
+  for (const [field, column] of updates) {
+    db.prepare(`UPDATE scenes SET ${column} = ? WHERE id = ?`).run(req.body[field].trim(), id);
   }
 
   db.prepare("UPDATE scripts SET last_edited = ? WHERE id = ?").run(

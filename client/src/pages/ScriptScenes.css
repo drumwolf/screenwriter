@@ -69,6 +69,24 @@
   white-space: pre-wrap;
 }
 
+.scene-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-h);
+  font: inherit;
+  resize: vertical;
+}
+
+.scene-textarea:hover,
+.scene-textarea:focus {
+  border-color: var(--border);
+  background: var(--code-bg);
+}
+
 .draft-button {
   align-self: flex-start;
   padding: 8px 16px;

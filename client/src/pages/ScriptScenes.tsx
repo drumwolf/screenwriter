@@ -24,6 +24,8 @@ function ScriptScenes() {
   const [selection, setSelection] = useState<string | typeof NEW_SCENE | null>(null)
   const [titleDraft, setTitleDraft] = useState('')
   const [headingDraft, setHeadingDraft] = useState('')
+  const [actionContextDraft, setActionContextDraft] = useState('')
+  const [subtextDraft, setSubtextDraft] = useState('')
   const [drafting, setDrafting] = useState(false)
 
   useEffect(() => {
@@ -44,6 +46,8 @@ function ScriptScenes() {
   useEffect(() => {
     setTitleDraft(selectedScene?.title ?? '')
     setHeadingDraft(selectedScene?.heading ?? '')
+    setActionContextDraft(selectedScene?.actionContext ?? '')
+    setSubtextDraft(selectedScene?.subtext ?? '')
   }, [selectedScene])
 
   async function handleCreateScene(e: FormEvent<HTMLFormElement>) {
@@ -69,7 +73,7 @@ function ScriptScenes() {
     form.reset()
   }
 
-  async function saveField(field: 'title' | 'heading', value: string) {
+  async function saveField(field: 'title' | 'heading' | 'actionContext' | 'subtext', value: string) {
     if (!id || !selectedScene) return
     const trimmed = value.trim()
     if (!trimmed || trimmed === selectedScene[field]) return
@@ -175,12 +179,26 @@ function ScriptScenes() {
 
             <div className="scene-field">
               <h3>Action / context</h3>
-              <p>{selectedScene.actionContext}</p>
+              <textarea
+                className="scene-textarea"
+                value={actionContextDraft}
+                onChange={(e) => setActionContextDraft(e.target.value)}
+                onBlur={() => saveField('actionContext', actionContextDraft)}
+                rows={3}
+                aria-label="Action / context"
+              />
             </div>
 
             <div className="scene-field">
               <h3>Subtext</h3>
-              <p>{selectedScene.subtext}</p>
+              <textarea
+                className="scene-textarea"
+                value={subtextDraft}
+                onChange={(e) => setSubtextDraft(e.target.value)}
+                onBlur={() => saveField('subtext', subtextDraft)}
+                rows={3}
+                aria-label="Subtext"
+              />
             </div>
 
             <button type="button" onClick={handleDraft} disabled={drafting} className="draft-button">
