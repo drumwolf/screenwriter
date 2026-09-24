@@ -38,6 +38,18 @@ if (!sceneColumns.some((col) => col.name === "title")) {
 if (!sceneColumns.some((col) => col.name === "draft")) {
   db.exec("ALTER TABLE scenes ADD COLUMN draft TEXT NOT NULL DEFAULT ''");
 }
+if (!sceneColumns.some((col) => col.name === "order_index")) {
+  db.exec("ALTER TABLE scenes ADD COLUMN order_index INTEGER NOT NULL DEFAULT 0");
+
+  const scriptIds = db.prepare("SELECT id FROM scripts").all() as { id: string }[];
+  const setOrder = db.prepare("UPDATE scenes SET order_index = ? WHERE id = ?");
+  for (const { id: scriptId } of scriptIds) {
+    const scenes = db
+      .prepare("SELECT id FROM scenes WHERE script_id = ? ORDER BY created_at ASC")
+      .all(scriptId) as { id: string }[];
+    scenes.forEach((scene, index) => setOrder.run(index, scene.id));
+  }
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS characters (

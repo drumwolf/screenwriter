@@ -121,6 +121,45 @@
   background: var(--code-bg);
 }
 
+.scene-list-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.scene-list-item .split-item {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scene-reorder {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.scene-reorder button {
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1.1;
+  font-size: 0.75rem;
+}
+
+.scene-reorder button:hover:not(:disabled) {
+  color: var(--text-h);
+}
+
+.scene-reorder button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .character-checklist {
   list-style: none;
   margin: 0;

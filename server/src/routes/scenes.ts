@@ -11,18 +11,55 @@ interface Scene {
   actionContext: string;
   subtext: string;
   draft: string;
+  orderIndex: number;
   createdAt: string;
 }
 
 const SCENE_COLUMNS =
-  "id, script_id AS scriptId, heading, title, action_context AS actionContext, subtext, draft, created_at AS createdAt";
+  "id, script_id AS scriptId, heading, title, action_context AS actionContext, subtext, draft, order_index AS orderIndex, created_at AS createdAt";
 
 export const scenesRouter = Router({ mergeParams: true });
 
 scenesRouter.get("/", (req, res) => {
   const { scriptId } = req.params as { scriptId: string };
   const scenes = db
-    .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE script_id = ? ORDER BY created_at ASC`)
+    .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE script_id = ? ORDER BY order_index ASC`)
+    .all(scriptId) as Scene[];
+
+  res.json(scenes);
+});
+
+scenesRouter.put("/order", (req, res) => {
+  const { scriptId } = req.params as { scriptId: string };
+  const { sceneIds } = req.body;
+
+  if (!Array.isArray(sceneIds) || !sceneIds.every((id) => typeof id === "string")) {
+    res.status(400).json({ error: "sceneIds must be an array of strings" });
+    return;
+  }
+
+  const existing = db
+    .prepare("SELECT id FROM scenes WHERE script_id = ?")
+    .all(scriptId) as { id: string }[];
+  const existingIds = new Set(existing.map((s) => s.id));
+
+  if (
+    sceneIds.length !== existingIds.size ||
+    !sceneIds.every((id) => existingIds.has(id)) ||
+    new Set(sceneIds).size !== sceneIds.length
+  ) {
+    res.status(400).json({ error: "sceneIds must match exactly the scenes in this script" });
+    return;
+  }
+
+  const reorder = db.transaction((ids: string[]) => {
+    const setOrder = db.prepare("UPDATE scenes SET order_index = ? WHERE id = ?");
+    ids.forEach((sceneId, index) => setOrder.run(index, sceneId));
+  });
+  reorder(sceneIds);
+
+  const scenes = db
+    .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE script_id = ? ORDER BY order_index ASC`)
     .all(scriptId) as Scene[];
 
   res.json(scenes);
@@ -54,6 +91,11 @@ scenesRouter.post("/", async (req, res) => {
   const trimmedActionContext = actionContext.trim();
   const { heading, title } = await generateSceneMeta(trimmedActionContext);
 
+  const { maxOrder } = db
+    .prepare("SELECT MAX(order_index) AS maxOrder FROM scenes WHERE script_id = ?")
+    .get(scriptId) as { maxOrder: number | null };
+  const orderIndex = maxOrder === null ? 0 : maxOrder + 1;
+
   const now = new Date().toISOString();
   const scene: Scene = {
     id: randomUUID(),
@@ -63,11 +105,12 @@ scenesRouter.post("/", async (req, res) => {
     actionContext: trimmedActionContext,
     subtext: subtext.trim(),
     draft: "",
+    orderIndex,
     createdAt: now,
   };
 
   db.prepare(
-    "INSERT INTO scenes (id, script_id, heading, title, action_context, subtext, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO scenes (id, script_id, heading, title, action_context, subtext, order_index, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
     scene.id,
     scene.scriptId,
@@ -75,6 +118,7 @@ scenesRouter.post("/", async (req, res) => {
     scene.title,
     scene.actionContext,
     scene.subtext,
+    scene.orderIndex,
     scene.createdAt,
   );
 

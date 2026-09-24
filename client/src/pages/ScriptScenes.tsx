@@ -12,6 +12,7 @@ interface Scene {
   actionContext: string
   subtext: string
   draft: string
+  orderIndex: number
   createdAt: string
 }
 
@@ -152,6 +153,27 @@ function ScriptScenes() {
     }
   }
 
+  async function moveScene(sceneId: string, direction: -1 | 1) {
+    if (!id) return
+    const index = scenes.findIndex((scene) => scene.id === sceneId)
+    const targetIndex = index + direction
+    if (index === -1 || targetIndex < 0 || targetIndex >= scenes.length) return
+
+    const reordered = [...scenes]
+    ;[reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]]
+    setScenes(reordered)
+
+    const res = await fetch(`/api/scripts/${id}/scenes/order`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sceneIds: reordered.map((scene) => scene.id) }),
+    })
+    if (!res.ok) return
+
+    const updated: Scene[] = await res.json()
+    setScenes(updated)
+  }
+
   async function handleCopyDraft() {
     if (!selectedScene?.draft) return
     await navigator.clipboard.writeText(selectedScene.draft)
@@ -166,8 +188,8 @@ function ScriptScenes() {
     <div className="split-view">
       <aside className="split-sidebar">
         <ul className="split-list">
-          {scenes.map((scene) => (
-            <li key={scene.id}>
+          {scenes.map((scene, index) => (
+            <li key={scene.id} className="scene-list-item">
               <button
                 type="button"
                 className={scene.id === selection ? 'split-item active' : 'split-item'}
@@ -175,6 +197,26 @@ function ScriptScenes() {
               >
                 {scene.title}
               </button>
+              <div className="scene-reorder">
+                <button
+                  type="button"
+                  onClick={() => moveScene(scene.id, -1)}
+                  disabled={index === 0}
+                  aria-label="Move scene up"
+                  title="Move up"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveScene(scene.id, 1)}
+                  disabled={index === scenes.length - 1}
+                  aria-label="Move scene down"
+                  title="Move down"
+                >
+                  ↓
+                </button>
+              </div>
             </li>
           ))}
         </ul>
