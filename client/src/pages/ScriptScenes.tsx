@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
+import ExpandableTextField from '../components/ExpandableTextField'
 import './ScriptScenes.css'
 import './SplitView.css'
 
@@ -32,8 +33,6 @@ function ScriptScenes() {
   const [selection, setSelection] = useState<string | typeof NEW_SCENE | null>(null)
   const [titleDraft, setTitleDraft] = useState('')
   const [headingDraft, setHeadingDraft] = useState('')
-  const [actionContextDraft, setActionContextDraft] = useState('')
-  const [subtextDraft, setSubtextDraft] = useState('')
   const [drafting, setDrafting] = useState(false)
   const [characters, setCharacters] = useState<Character[]>([])
   const [linkedCharacterIds, setLinkedCharacterIds] = useState<Set<string>>(new Set())
@@ -60,8 +59,6 @@ function ScriptScenes() {
   useEffect(() => {
     setTitleDraft(selectedScene?.title ?? '')
     setHeadingDraft(selectedScene?.heading ?? '')
-    setActionContextDraft(selectedScene?.actionContext ?? '')
-    setSubtextDraft(selectedScene?.subtext ?? '')
 
     if (!id || !selectedScene) {
       setLinkedCharacterIds(new Set())
@@ -236,25 +233,21 @@ function ScriptScenes() {
 
             <div className="scene-field">
               <h3>Action / context</h3>
-              <textarea
-                className="scene-textarea"
-                value={actionContextDraft}
-                onChange={(e) => setActionContextDraft(e.target.value)}
-                onBlur={() => saveField('actionContext', actionContextDraft)}
-                rows={3}
-                aria-label="Action / context"
+              <ExpandableTextField
+                label="Action / context"
+                value={selectedScene.actionContext}
+                placeholder="What's physically happening in this scene?"
+                onSave={(v) => saveField('actionContext', v)}
               />
             </div>
 
             <div className="scene-field">
               <h3>Subtext</h3>
-              <textarea
-                className="scene-textarea"
-                value={subtextDraft}
-                onChange={(e) => setSubtextDraft(e.target.value)}
-                onBlur={() => saveField('subtext', subtextDraft)}
-                rows={3}
-                aria-label="Subtext"
+              <ExpandableTextField
+                label="Subtext"
+                value={selectedScene.subtext}
+                placeholder="What's really going on underneath, unspoken?"
+                onSave={(v) => saveField('subtext', v)}
               />
             </div>
 
