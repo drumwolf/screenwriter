@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { useOutletContext, useParams } from 'react-router-dom'
 import ExpandableTextField from '../components/ExpandableTextField'
+import type { ScriptLayoutContext } from './ScriptLayout'
 import './ScriptScenes.css'
 import './SplitView.css'
 
@@ -28,6 +29,7 @@ const NEW_SCENE = 'new' as const
 
 function ScriptScenes() {
   const { id } = useParams<{ id: string }>()
+  const { setHeaderAction } = useOutletContext<ScriptLayoutContext>()
   const [scenes, setScenes] = useState<Scene[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -56,6 +58,11 @@ function ScriptScenes() {
   }, [id])
 
   const selectedScene = scenes.find((scene) => scene.id === selection) ?? null
+
+  useEffect(() => {
+    setHeaderAction({ label: '+ New Scene', onClick: () => setSelection(NEW_SCENE) })
+    return () => setHeaderAction(null)
+  }, [setHeaderAction])
 
   useEffect(() => {
     setTitleDraft(selectedScene?.title ?? '')
@@ -220,14 +227,6 @@ function ScriptScenes() {
             </li>
           ))}
         </ul>
-
-        <button
-          type="button"
-          className="split-add-button"
-          onClick={() => setSelection(NEW_SCENE)}
-        >
-          + New Scene
-        </button>
       </aside>
 
       <section className="split-main">
