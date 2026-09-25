@@ -63,11 +63,35 @@ function formatCharacters(characters: SceneCharacter[]): string {
   );
 }
 
+export interface EarlierScene {
+  heading: string;
+  title: string;
+  content: string;
+  isDraft: boolean;
+}
+
+function formatEarlierScenes(scenes: EarlierScene[]): string {
+  if (scenes.length === 0) return "";
+
+  const blocks = scenes.map((scene, index) => {
+    const kind = scene.isDraft ? "drafted scene" : "planned premise, not yet drafted";
+    return `${index + 1}. ${scene.title} (${scene.heading}) — ${kind}:\n${scene.content}`;
+  });
+
+  return (
+    "\n\nEARLIER SCENES IN THIS SCRIPT, IN ORDER (for continuity — stay consistent " +
+    "with what has already happened; don't re-explain or repeat things already " +
+    "established here):\n" +
+    blocks.join("\n\n")
+  );
+}
+
 export async function draftScene(params: {
   heading: string;
   actionContext: string;
   subtext: string;
   characters?: SceneCharacter[];
+  earlierScenes?: EarlierScene[];
 }): Promise<string> {
   const response = await anthropic.messages.create({
     model: "claude-opus-5",
@@ -77,8 +101,9 @@ export async function draftScene(params: {
       "screenplay format (character names in caps above their lines). You're " +
       "given a scene heading, what physically happens (action/context), the " +
       "subtext — what's really going on underneath, unspoken — and, when " +
-      "available, established details about the characters in the scene. " +
-      "Write only the scene itself, nothing else — no preamble, no notes.",
+      "available, established details about the characters in the scene and " +
+      "the earlier scenes in the script. Write only the scene itself, nothing " +
+      "else — no preamble, no notes.",
     messages: [
       {
         role: "user",
@@ -86,7 +111,8 @@ export async function draftScene(params: {
           `HEADING: ${params.heading}\n\n` +
           `ACTION/CONTEXT: ${params.actionContext}\n\n` +
           `SUBTEXT: ${params.subtext}` +
-          formatCharacters(params.characters ?? []),
+          formatCharacters(params.characters ?? []) +
+          formatEarlierScenes(params.earlierScenes ?? []),
       },
     ],
   });

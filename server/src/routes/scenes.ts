@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
-import { draftScene, generateSceneMeta, type SceneCharacter } from "../ai.js";
+import { draftScene, generateSceneMeta, type EarlierScene, type SceneCharacter } from "../ai.js";
 import { db } from "../db.js";
 
 interface Scene {
@@ -198,6 +198,33 @@ function getSceneCharacters(sceneId: string): SceneCharacter[] {
   }));
 }
 
+function getEarlierScenes(scriptId: string, orderIndex: number): EarlierScene[] {
+  const scenes = db
+    .prepare(
+      `SELECT heading, title, action_context AS actionContext, subtext, draft
+       FROM scenes
+       WHERE script_id = ? AND order_index < ?
+       ORDER BY order_index ASC`,
+    )
+    .all(scriptId, orderIndex) as {
+    heading: string;
+    title: string;
+    actionContext: string;
+    subtext: string;
+    draft: string;
+  }[];
+
+  return scenes.map((scene) => ({
+    heading: scene.heading,
+    title: scene.title,
+    isDraft: scene.draft !== "",
+    content:
+      scene.draft !== ""
+        ? scene.draft
+        : `ACTION/CONTEXT: ${scene.actionContext}\nSUBTEXT: ${scene.subtext}`,
+  }));
+}
+
 scenesRouter.post("/:id/draft", async (req, res) => {
   const { scriptId, id } = req.params as { scriptId: string; id: string };
 
@@ -216,6 +243,7 @@ scenesRouter.post("/:id/draft", async (req, res) => {
       actionContext: scene.actionContext,
       subtext: scene.subtext,
       characters: getSceneCharacters(id),
+      earlierScenes: getEarlierScenes(scriptId, scene.orderIndex),
     });
 
     db.prepare("UPDATE scenes SET draft = ? WHERE id = ?").run(draft, id);
