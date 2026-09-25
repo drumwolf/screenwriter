@@ -29,11 +29,27 @@ export async function generateSceneMeta(actionContext: string): Promise<SceneMet
     const headingMatch = text.match(/HEADING:\s*(.+)/i);
     const titleMatch = text.match(/TITLE:\s*(.+)/i);
 
+    // The model sometimes drops one or both of the "HEADING:"/"TITLE:" labels
+    // and just writes the bare value as its own line instead. When a labeled
+    // match is missing, fall back to the first remaining line that isn't the
+    // other field's line, before giving up and using the placeholders.
+    const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+    const titleValue = titleMatch?.[1]?.trim();
+    const headingValue = headingMatch?.[1]?.trim();
+
+    const heading = headingValue || lines.find((line) => !/^TITLE:/i.test(line));
+    const title = titleValue || lines.find((line) => !/^HEADING:/i.test(line) && line !== heading);
+
+    if (!heading || !title) {
+      console.error("generateSceneMeta: couldn't parse model response:", JSON.stringify(text));
+    }
+
     return {
-      heading: headingMatch?.[1]?.trim() || HEADING_FALLBACK,
-      title: titleMatch?.[1]?.trim() || TITLE_FALLBACK,
+      heading: heading || HEADING_FALLBACK,
+      title: title || TITLE_FALLBACK,
     };
-  } catch {
+  } catch (err) {
+    console.error("generateSceneMeta: API call failed:", err);
     return { heading: HEADING_FALLBACK, title: TITLE_FALLBACK };
   }
 }
