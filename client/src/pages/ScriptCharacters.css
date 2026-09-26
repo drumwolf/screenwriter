@@ -71,15 +71,8 @@
   align-items: flex-start;
 }
 
-.entry-item textarea {
+.entry-item .expandable-preview {
   flex: 1;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
-  font: inherit;
-  resize: vertical;
 }
 
 .entry-delete {

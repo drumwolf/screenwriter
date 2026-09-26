@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
+import ExpandableTextField from '../components/ExpandableTextField'
 import './ScriptCharacters.css'
 import './SplitView.css'
 
@@ -31,7 +32,6 @@ function ScriptCharacters() {
   const [entries, setEntries] = useState<CharacterEntry[]>([])
   const [nameDraft, setNameDraft] = useState('')
   const [noteDraft, setNoteDraft] = useState('')
-  const [entryDrafts, setEntryDrafts] = useState<Record<string, string>>({})
   const [newEntry, setNewEntry] = useState('')
   const [creatingCharacter, setCreatingCharacter] = useState(false)
   const [addingEntry, setAddingEntry] = useState(false)
@@ -63,10 +63,7 @@ function ScriptCharacters() {
 
     fetch(`/api/scripts/${id}/characters/${selectedCharacter.id}/entries`)
       .then((res) => res.json())
-      .then((data: CharacterEntry[]) => {
-        setEntries(data)
-        setEntryDrafts(Object.fromEntries(data.map((entry) => [entry.id, entry.content])))
-      })
+      .then((data: CharacterEntry[]) => setEntries(data))
   }, [id, selectedCharacter])
 
   async function handleCreateCharacter(e: FormEvent<HTMLFormElement>) {
@@ -131,25 +128,24 @@ function ScriptCharacters() {
 
       const entry: CharacterEntry = await res.json()
       setEntries((prev) => [...prev, entry])
-      setEntryDrafts((prev) => ({ ...prev, [entry.id]: entry.content }))
       setNewEntry('')
     } finally {
       setAddingEntry(false)
     }
   }
 
-  async function saveEntry(entryId: string) {
+  async function saveEntry(entryId: string, content: string) {
     if (!id || !selectedCharacter) return
     const original = entries.find((entry) => entry.id === entryId)
-    const draft = (entryDrafts[entryId] ?? '').trim()
-    if (!original || !draft || draft === original.content) return
+    const trimmed = content.trim()
+    if (!original || !trimmed || trimmed === original.content) return
 
     const res = await fetch(
       `/api/scripts/${id}/characters/${selectedCharacter.id}/entries/${entryId}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: draft }),
+        body: JSON.stringify({ content: trimmed }),
       },
     )
     if (!res.ok) return
@@ -168,11 +164,6 @@ function ScriptCharacters() {
     if (!res.ok) return
 
     setEntries((prev) => prev.filter((entry) => entry.id !== entryId))
-    setEntryDrafts((prev) => {
-      const next = { ...prev }
-      delete next[entryId]
-      return next
-    })
   }
 
   if (loading) return <p className="split-main">Loading…</p>
@@ -242,13 +233,10 @@ function ScriptCharacters() {
             <ul className="entry-list">
               {entries.map((entry) => (
                 <li key={entry.id} className="entry-item">
-                  <textarea
-                    value={entryDrafts[entry.id] ?? ''}
-                    onChange={(e) =>
-                      setEntryDrafts((prev) => ({ ...prev, [entry.id]: e.target.value }))
-                    }
-                    onBlur={() => saveEntry(entry.id)}
-                    rows={2}
+                  <ExpandableTextField
+                    label="Notebook entry"
+                    value={entry.content}
+                    onSave={(v) => saveEntry(entry.id, v)}
                   />
                   <button
                     type="button"
