@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useParams } from 'react-router-dom'
+import { useOutletContext, useParams } from 'react-router-dom'
 import ExpandableTextField from '../components/ExpandableTextField'
+import type { ScriptLayoutContext } from './ScriptLayout'
 import './ScriptCharacters.css'
 import './SplitView.css'
 
@@ -24,6 +25,7 @@ const NEW_CHARACTER = 'new' as const
 
 function ScriptCharacters() {
   const { id } = useParams<{ id: string }>()
+  const { setHeaderAction } = useOutletContext<ScriptLayoutContext>()
   const [characters, setCharacters] = useState<Character[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -50,6 +52,11 @@ function ScriptCharacters() {
   }, [id])
 
   const selectedCharacter = characters.find((c) => c.id === selection) ?? null
+
+  useEffect(() => {
+    setHeaderAction({ label: '+ New Character', onClick: () => setSelection(NEW_CHARACTER) })
+    return () => setHeaderAction(null)
+  }, [setHeaderAction])
 
   useEffect(() => {
     setNameDraft(selectedCharacter?.name ?? '')
@@ -185,14 +192,6 @@ function ScriptCharacters() {
             </li>
           ))}
         </ul>
-
-        <button
-          type="button"
-          className="split-add-button"
-          onClick={() => setSelection(NEW_CHARACTER)}
-        >
-          + New Character
-        </button>
       </aside>
 
       <section className="split-main">
