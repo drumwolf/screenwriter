@@ -36,6 +36,7 @@ function ScriptScenes() {
   const [selection, setSelection] = useState<string | typeof NEW_SCENE | null>(null)
   const [titleDraft, setTitleDraft] = useState('')
   const [headingDraft, setHeadingDraft] = useState('')
+  const [creatingScene, setCreatingScene] = useState(false)
   const [drafting, setDrafting] = useState(false)
   const [characters, setCharacters] = useState<Character[]>([])
   const [linkedCharacterIds, setLinkedCharacterIds] = useState<Set<string>>(new Set())
@@ -80,7 +81,7 @@ function ScriptScenes() {
 
   async function handleCreateScene(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!id) return
+    if (!id || creatingScene) return
 
     const form = e.currentTarget
     const formData = new FormData(form)
@@ -88,17 +89,22 @@ function ScriptScenes() {
     const subtext = String(formData.get('subtext') ?? '').trim()
     if (!actionContext || !subtext) return
 
-    const res = await fetch(`/api/scripts/${id}/scenes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ actionContext, subtext }),
-    })
-    if (!res.ok) return
+    setCreatingScene(true)
+    try {
+      const res = await fetch(`/api/scripts/${id}/scenes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actionContext, subtext }),
+      })
+      if (!res.ok) return
 
-    const scene: Scene = await res.json()
-    setScenes((prev) => [...prev, scene])
-    setSelection(scene.id)
-    form.reset()
+      const scene: Scene = await res.json()
+      setScenes((prev) => [...prev, scene])
+      setSelection(scene.id)
+      form.reset()
+    } finally {
+      setCreatingScene(false)
+    }
   }
 
   async function saveField(field: 'title' | 'heading' | 'actionContext' | 'subtext', value: string) {
@@ -250,7 +256,9 @@ function ScriptScenes() {
               required
             />
 
-            <button type="submit">Create Scene</button>
+            <button type="submit" disabled={creatingScene}>
+              {creatingScene ? 'Creating…' : 'Create Scene'}
+            </button>
           </form>
         )}
 

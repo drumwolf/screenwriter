@@ -33,6 +33,8 @@ function ScriptCharacters() {
   const [noteDraft, setNoteDraft] = useState('')
   const [entryDrafts, setEntryDrafts] = useState<Record<string, string>>({})
   const [newEntry, setNewEntry] = useState('')
+  const [creatingCharacter, setCreatingCharacter] = useState(false)
+  const [addingEntry, setAddingEntry] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -69,7 +71,7 @@ function ScriptCharacters() {
 
   async function handleCreateCharacter(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!id) return
+    if (!id || creatingCharacter) return
 
     const form = e.currentTarget
     const formData = new FormData(form)
@@ -77,17 +79,22 @@ function ScriptCharacters() {
     const note = String(formData.get('note') ?? '').trim()
     if (!name) return
 
-    const res = await fetch(`/api/scripts/${id}/characters`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, note }),
-    })
-    if (!res.ok) return
+    setCreatingCharacter(true)
+    try {
+      const res = await fetch(`/api/scripts/${id}/characters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, note }),
+      })
+      if (!res.ok) return
 
-    const character: Character = await res.json()
-    setCharacters((prev) => [...prev, character])
-    setSelection(character.id)
-    form.reset()
+      const character: Character = await res.json()
+      setCharacters((prev) => [...prev, character])
+      setSelection(character.id)
+      form.reset()
+    } finally {
+      setCreatingCharacter(false)
+    }
   }
 
   async function saveField(field: 'name' | 'note', value: string) {
@@ -109,21 +116,26 @@ function ScriptCharacters() {
 
   async function handleAddEntry(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!id || !selectedCharacter) return
+    if (!id || !selectedCharacter || addingEntry) return
     const content = newEntry.trim()
     if (!content) return
 
-    const res = await fetch(`/api/scripts/${id}/characters/${selectedCharacter.id}/entries`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    })
-    if (!res.ok) return
+    setAddingEntry(true)
+    try {
+      const res = await fetch(`/api/scripts/${id}/characters/${selectedCharacter.id}/entries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      })
+      if (!res.ok) return
 
-    const entry: CharacterEntry = await res.json()
-    setEntries((prev) => [...prev, entry])
-    setEntryDrafts((prev) => ({ ...prev, [entry.id]: entry.content }))
-    setNewEntry('')
+      const entry: CharacterEntry = await res.json()
+      setEntries((prev) => [...prev, entry])
+      setEntryDrafts((prev) => ({ ...prev, [entry.id]: entry.content }))
+      setNewEntry('')
+    } finally {
+      setAddingEntry(false)
+    }
   }
 
   async function saveEntry(entryId: string) {
@@ -201,7 +213,9 @@ function ScriptCharacters() {
             <label htmlFor="note">Note (optional)</label>
             <input id="note" name="note" placeholder="A one-line broad note, if you have one" />
 
-            <button type="submit">Create Character</button>
+            <button type="submit" disabled={creatingCharacter}>
+              {creatingCharacter ? 'Creating…' : 'Create Character'}
+            </button>
           </form>
         )}
 
@@ -255,7 +269,9 @@ function ScriptCharacters() {
                 placeholder="Add a detail or anecdote…"
                 rows={2}
               />
-              <button type="submit">Add</button>
+              <button type="submit" disabled={addingEntry}>
+                {addingEntry ? 'Adding…' : 'Add'}
+              </button>
             </form>
           </div>
         )}
