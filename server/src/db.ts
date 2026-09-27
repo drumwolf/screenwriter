@@ -61,6 +61,20 @@ db.exec(`
   )
 `);
 
+const characterColumns = db.prepare("PRAGMA table_info(characters)").all() as { name: string }[];
+if (!characterColumns.some((col) => col.name === "order_index")) {
+  db.exec("ALTER TABLE characters ADD COLUMN order_index INTEGER NOT NULL DEFAULT 0");
+
+  const scriptIds = db.prepare("SELECT id FROM scripts").all() as { id: string }[];
+  const setOrder = db.prepare("UPDATE characters SET order_index = ? WHERE id = ?");
+  for (const { id: scriptId } of scriptIds) {
+    const characters = db
+      .prepare("SELECT id FROM characters WHERE script_id = ? ORDER BY created_at ASC")
+      .all(scriptId) as { id: string }[];
+    characters.forEach((character, index) => setOrder.run(index, character.id));
+  }
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS character_entries (
     id TEXT PRIMARY KEY,

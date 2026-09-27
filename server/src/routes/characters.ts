@@ -7,17 +7,55 @@ interface Character {
   scriptId: string;
   name: string;
   note: string;
+  orderIndex: number;
   createdAt: string;
 }
 
-const CHARACTER_COLUMNS = "id, script_id AS scriptId, name, note, created_at AS createdAt";
+const CHARACTER_COLUMNS =
+  "id, script_id AS scriptId, name, note, order_index AS orderIndex, created_at AS createdAt";
 
 export const charactersRouter = Router({ mergeParams: true });
 
 charactersRouter.get("/", (req, res) => {
   const { scriptId } = req.params as { scriptId: string };
   const characters = db
-    .prepare(`SELECT ${CHARACTER_COLUMNS} FROM characters WHERE script_id = ? ORDER BY created_at ASC`)
+    .prepare(`SELECT ${CHARACTER_COLUMNS} FROM characters WHERE script_id = ? ORDER BY order_index ASC`)
+    .all(scriptId) as Character[];
+
+  res.json(characters);
+});
+
+charactersRouter.put("/order", (req, res) => {
+  const { scriptId } = req.params as { scriptId: string };
+  const { characterIds } = req.body;
+
+  if (!Array.isArray(characterIds) || !characterIds.every((id) => typeof id === "string")) {
+    res.status(400).json({ error: "characterIds must be an array of strings" });
+    return;
+  }
+
+  const existing = db
+    .prepare("SELECT id FROM characters WHERE script_id = ?")
+    .all(scriptId) as { id: string }[];
+  const existingIds = new Set(existing.map((c) => c.id));
+
+  if (
+    characterIds.length !== existingIds.size ||
+    !characterIds.every((id) => existingIds.has(id)) ||
+    new Set(characterIds).size !== characterIds.length
+  ) {
+    res.status(400).json({ error: "characterIds must match exactly the characters in this script" });
+    return;
+  }
+
+  const reorder = db.transaction((ids: string[]) => {
+    const setOrder = db.prepare("UPDATE characters SET order_index = ? WHERE id = ?");
+    ids.forEach((characterId, index) => setOrder.run(index, characterId));
+  });
+  reorder(characterIds);
+
+  const characters = db
+    .prepare(`SELECT ${CHARACTER_COLUMNS} FROM characters WHERE script_id = ? ORDER BY order_index ASC`)
     .all(scriptId) as Character[];
 
   res.json(characters);
@@ -38,17 +76,30 @@ charactersRouter.post("/", (req, res) => {
     return;
   }
 
+  const { maxOrder } = db
+    .prepare("SELECT MAX(order_index) AS maxOrder FROM characters WHERE script_id = ?")
+    .get(scriptId) as { maxOrder: number | null };
+  const orderIndex = maxOrder === null ? 0 : maxOrder + 1;
+
   const character: Character = {
     id: randomUUID(),
     scriptId,
     name: name.trim(),
     note: typeof note === "string" ? note.trim() : "",
+    orderIndex,
     createdAt: new Date().toISOString(),
   };
 
   db.prepare(
-    "INSERT INTO characters (id, script_id, name, note, created_at) VALUES (?, ?, ?, ?, ?)",
-  ).run(character.id, character.scriptId, character.name, character.note, character.createdAt);
+    "INSERT INTO characters (id, script_id, name, note, order_index, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+  ).run(
+    character.id,
+    character.scriptId,
+    character.name,
+    character.note,
+    character.orderIndex,
+    character.createdAt,
+  );
 
   res.status(201).json(character);
 });

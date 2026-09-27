@@ -10,6 +10,7 @@ interface Character {
   scriptId: string
   name: string
   note: string
+  orderIndex: number
   createdAt: string
 }
 
@@ -173,6 +174,27 @@ function ScriptCharacters() {
     setEntries((prev) => prev.filter((entry) => entry.id !== entryId))
   }
 
+  async function moveCharacter(characterId: string, direction: -1 | 1) {
+    if (!id) return
+    const index = characters.findIndex((character) => character.id === characterId)
+    const targetIndex = index + direction
+    if (index === -1 || targetIndex < 0 || targetIndex >= characters.length) return
+
+    const reordered = [...characters]
+    ;[reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]]
+    setCharacters(reordered)
+
+    const res = await fetch(`/api/scripts/${id}/characters/order`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ characterIds: reordered.map((character) => character.id) }),
+    })
+    if (!res.ok) return
+
+    const updated: Character[] = await res.json()
+    setCharacters(updated)
+  }
+
   if (loading) return <p className="split-main">Loading…</p>
   if (error) return <p className="split-main" role="alert">Couldn't load characters.</p>
 
@@ -180,8 +202,8 @@ function ScriptCharacters() {
     <div className="split-view">
       <aside className="split-sidebar">
         <ul className="split-list">
-          {characters.map((character) => (
-            <li key={character.id}>
+          {characters.map((character, index) => (
+            <li key={character.id} className="split-list-item">
               <button
                 type="button"
                 className={character.id === selection ? 'split-item active' : 'split-item'}
@@ -189,6 +211,26 @@ function ScriptCharacters() {
               >
                 {character.name}
               </button>
+              <div className="split-reorder">
+                <button
+                  type="button"
+                  onClick={() => moveCharacter(character.id, -1)}
+                  disabled={index === 0}
+                  aria-label="Move character up"
+                  title="Move up"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveCharacter(character.id, 1)}
+                  disabled={index === characters.length - 1}
+                  aria-label="Move character down"
+                  title="Move down"
+                >
+                  ↓
+                </button>
+              </div>
             </li>
           ))}
         </ul>

@@ -202,7 +202,7 @@ function ScriptScenes() {
       <aside className="split-sidebar">
         <ul className="split-list">
           {scenes.map((scene, index) => (
-            <li key={scene.id} className="scene-list-item">
+            <li key={scene.id} className="split-list-item">
               <button
                 type="button"
                 className={scene.id === selection ? 'split-item active' : 'split-item'}
@@ -210,7 +210,7 @@ function ScriptScenes() {
               >
                 {scene.title}
               </button>
-              <div className="scene-reorder">
+              <div className="split-reorder">
                 <button
                   type="button"
                   onClick={() => moveScene(scene.id, -1)}

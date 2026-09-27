@@ -46,6 +46,45 @@
   color: var(--text-h);
 }
 
+.split-list-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.split-list-item .split-item {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.split-reorder {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.split-reorder button {
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1.1;
+  font-size: 0.75rem;
+}
+
+.split-reorder button:hover:not(:disabled) {
+  color: var(--text-h);
+}
+
+.split-reorder button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .split-add-button {
   padding: 8px 12px;
   border-radius: 6px;
