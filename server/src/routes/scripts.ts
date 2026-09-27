@@ -57,3 +57,31 @@ scriptsRouter.post("/", (req, res) => {
 
   res.status(201).json(script);
 });
+
+scriptsRouter.delete("/:id", (req, res) => {
+  const { id } = req.params;
+
+  const script = db.prepare("SELECT id FROM scripts WHERE id = ?").get(id);
+  if (!script) {
+    res.status(404).json({ error: "script not found" });
+    return;
+  }
+
+  const deleteScript = db.transaction((scriptId: string) => {
+    db.prepare(
+      `DELETE FROM scene_characters
+       WHERE scene_id IN (SELECT id FROM scenes WHERE script_id = ?)
+          OR character_id IN (SELECT id FROM characters WHERE script_id = ?)`,
+    ).run(scriptId, scriptId);
+    db.prepare(
+      `DELETE FROM character_entries
+       WHERE character_id IN (SELECT id FROM characters WHERE script_id = ?)`,
+    ).run(scriptId);
+    db.prepare("DELETE FROM characters WHERE script_id = ?").run(scriptId);
+    db.prepare("DELETE FROM scenes WHERE script_id = ?").run(scriptId);
+    db.prepare("DELETE FROM scripts WHERE id = ?").run(scriptId);
+  });
+  deleteScript(id);
+
+  res.status(204).send();
+});
