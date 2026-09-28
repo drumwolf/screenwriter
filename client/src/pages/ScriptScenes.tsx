@@ -107,7 +107,7 @@ function ScriptScenes() {
     }
   }
 
-  async function saveField(field: 'title' | 'heading' | 'actionContext' | 'subtext', value: string) {
+  async function saveField(field: 'title' | 'heading' | 'actionContext' | 'subtext' | 'draft', value: string) {
     if (!id || !selectedScene) return
     const trimmed = value.trim()
     if (!trimmed || trimmed === selectedScene[field]) return
@@ -346,7 +346,11 @@ function ScriptScenes() {
                     )}
                   </button>
                 </div>
-                <p className="scene-draft">{selectedScene.draft}</p>
+                <ExpandableTextField
+                  label="Draft"
+                  value={selectedScene.draft}
+                  onSave={(v) => saveField('draft', v)}
+                />
               </div>
             )}
           </div>

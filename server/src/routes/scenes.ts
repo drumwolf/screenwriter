@@ -134,6 +134,7 @@ const EDITABLE_FIELDS: Record<string, string> = {
   title: "title",
   actionContext: "action_context",
   subtext: "subtext",
+  draft: "draft",
 };
 
 scenesRouter.patch("/:id", (req, res) => {

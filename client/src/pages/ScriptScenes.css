@@ -85,15 +85,6 @@
   cursor: default;
 }
 
-.scene-draft {
-  font-family: var(--mono);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  background: var(--code-bg);
-  padding: 16px;
-  border-radius: 8px;
-}
-
 .scene-field-header {
   display: flex;
   align-items: center;
