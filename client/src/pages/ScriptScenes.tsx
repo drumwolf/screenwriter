@@ -25,6 +25,12 @@ interface Character {
   createdAt: string
 }
 
+interface ConsistencyIssue {
+  character: string
+  detail: string
+  explanation: string
+}
+
 const NEW_SCENE = 'new' as const
 
 function ScriptScenes() {
@@ -41,6 +47,8 @@ function ScriptScenes() {
   const [characters, setCharacters] = useState<Character[]>([])
   const [linkedCharacterIds, setLinkedCharacterIds] = useState<Set<string>>(new Set())
   const [copied, setCopied] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [consistencyIssues, setConsistencyIssues] = useState<ConsistencyIssue[] | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -68,6 +76,7 @@ function ScriptScenes() {
   useEffect(() => {
     setTitleDraft(selectedScene?.title ?? '')
     setHeadingDraft(selectedScene?.heading ?? '')
+    setConsistencyIssues(null)
 
     if (!id || !selectedScene) {
       setLinkedCharacterIds(new Set())
@@ -121,6 +130,7 @@ function ScriptScenes() {
 
     const updated: Scene = await res.json()
     setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
+    if (field === 'draft') setConsistencyIssues(null)
   }
 
   async function toggleCharacter(characterId: string) {
@@ -147,6 +157,7 @@ function ScriptScenes() {
     const previousDraft = selectedScene.draft
 
     setDrafting(true)
+    setConsistencyIssues(null)
     setScenes((prev) => prev.map((scene) => (scene.id === sceneId ? { ...scene, draft: '' } : scene)))
     try {
       const res = await fetch(`/api/scripts/${id}/scenes/${sceneId}/draft`, {
@@ -185,6 +196,23 @@ function ScriptScenes() {
 
     const updated: Scene[] = await res.json()
     setScenes(updated)
+  }
+
+  async function handleCheckConsistency() {
+    if (!id || !selectedScene?.draft) return
+
+    setChecking(true)
+    try {
+      const res = await fetch(`/api/scripts/${id}/scenes/${selectedScene.id}/check-consistency`, {
+        method: 'POST',
+      })
+      if (!res.ok) return
+
+      const { issues }: { issues: ConsistencyIssue[] } = await res.json()
+      setConsistencyIssues(issues)
+    } finally {
+      setChecking(false)
+    }
   }
 
   async function handleCopyDraft() {
@@ -319,9 +347,22 @@ function ScriptScenes() {
               </ul>
             </div>
 
-            <button type="button" onClick={handleDraft} disabled={drafting} className="draft-button">
-              {drafting ? 'Drafting…' : selectedScene.draft ? 'Redraft Scene' : 'Draft Scene'}
-            </button>
+            <div className="draft-actions">
+              <button type="button" onClick={handleDraft} disabled={drafting} className="draft-button">
+                {drafting ? 'Drafting…' : selectedScene.draft ? 'Redraft Scene' : 'Draft Scene'}
+              </button>
+
+              {selectedScene.draft && (
+                <button
+                  type="button"
+                  onClick={handleCheckConsistency}
+                  disabled={checking}
+                  className="draft-button"
+                >
+                  {checking ? 'Checking…' : 'Check Consistency'}
+                </button>
+              )}
+            </div>
 
             {selectedScene.draft && (
               <div className="scene-field">
@@ -351,6 +392,23 @@ function ScriptScenes() {
                   value={selectedScene.draft}
                   onSave={(v) => saveField('draft', v)}
                 />
+              </div>
+            )}
+
+            {consistencyIssues !== null && (
+              <div className="scene-field">
+                <h3>Consistency Check</h3>
+                {consistencyIssues.length === 0 ? (
+                  <p>No inconsistencies found.</p>
+                ) : (
+                  <ul className="consistency-issue-list">
+                    {consistencyIssues.map((issue, index) => (
+                      <li key={index} className="consistency-issue">
+                        <strong>{issue.character}:</strong> You established "{issue.detail}" — {issue.explanation}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
           </div>

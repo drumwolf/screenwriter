@@ -135,3 +135,47 @@ export async function draftScene(params: {
 
   return response.content.find((block) => block.type === "text")?.text?.trim() ?? "";
 }
+
+export interface ConsistencyIssue {
+  character: string;
+  detail: string;
+  explanation: string;
+}
+
+function extractJson(text: string): string {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  return (fenced ? fenced[1] : text).trim();
+}
+
+export async function checkConsistency(params: {
+  draft: string;
+  characters: SceneCharacter[];
+}): Promise<ConsistencyIssue[]> {
+  const response = await anthropic.messages.create({
+    model: "claude-opus-5",
+    max_tokens: 2048,
+    system: `You check a drafted screenplay scene for contradictions against specific established character details. You're given the scene's draft and, for each character in it, their name and a list of specific established details about them. Flag only direct contradictions of one of those specific listed details — not generic concerns, not things merely absent from the list.
+
+Respond with ONLY valid JSON, no markdown formatting, no code fences, no other text, in exactly this shape:
+{"issues": [{"character": "...", "detail": "...", "explanation": "..."}]}
+
+"detail" must be the established detail text quoted verbatim from the list you were given. "explanation" should describe the contradiction and end by asking the writer whether it's intentional or a slip. If there are no contradictions, respond with {"issues": []}.`,
+    messages: [
+      {
+        role: "user",
+        content: `DRAFT:\n${params.draft}` + formatCharacters(params.characters),
+      },
+    ],
+  });
+
+  const text = response.content.find((block) => block.type === "text")?.text ?? "";
+
+  try {
+    const parsed = JSON.parse(extractJson(text));
+    if (!Array.isArray(parsed?.issues)) throw new Error("missing issues array");
+    return parsed.issues;
+  } catch (err) {
+    console.error("checkConsistency: couldn't parse model response:", JSON.stringify(text), err);
+    return [];
+  }
+}

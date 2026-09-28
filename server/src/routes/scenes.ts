@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { Router } from "express";
-import { draftScene, generateSceneMeta, type EarlierScene, type SceneCharacter } from "../ai.js";
+import {
+  checkConsistency,
+  draftScene,
+  generateSceneMeta,
+  type EarlierScene,
+  type SceneCharacter,
+} from "../ai.js";
 import { db } from "../db.js";
 
 interface Scene {
@@ -254,6 +260,35 @@ scenesRouter.post("/:id/draft", async (req, res) => {
     );
 
     res.json({ ...scene, draft });
+  } catch (err) {
+    res.status(502).json({ error: (err as Error).message });
+  }
+});
+
+scenesRouter.post("/:id/check-consistency", async (req, res) => {
+  const { scriptId, id } = req.params as { scriptId: string; id: string };
+
+  const scene = db
+    .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE id = ? AND script_id = ?`)
+    .get(id, scriptId) as Scene | undefined;
+
+  if (!scene) {
+    res.status(404).json({ error: "scene not found" });
+    return;
+  }
+
+  if (!scene.draft) {
+    res.status(400).json({ error: "scene has no draft to check" });
+    return;
+  }
+
+  try {
+    const issues = await checkConsistency({
+      draft: scene.draft,
+      characters: getSceneCharacters(id),
+    });
+
+    res.json({ issues });
   } catch (err) {
     res.status(502).json({ error: (err as Error).message });
   }
