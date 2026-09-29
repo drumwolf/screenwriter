@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
-import { getScript } from '../api/scripts'
-import type { Script } from '../api/types'
+import { getScript, type Script } from '../api'
 import './ScriptLayout.css'
 
 export interface HeaderAction {

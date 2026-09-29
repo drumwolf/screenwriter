@@ -5,13 +5,15 @@ import {
   createScene,
   draftScene,
   getSceneCharacters,
+  listCharacters,
   listScenes,
   reorderScenes,
   setSceneCharacters,
   updateScene,
-} from '../api/scenes'
-import { listCharacters } from '../api/characters'
-import type { Character, ConsistencyIssue, Scene } from '../api/types'
+  type Character,
+  type ConsistencyIssue,
+  type Scene,
+} from '../api'
 import ExpandableTextField from '../components/ExpandableTextField'
 import type { ScriptLayoutContext } from './ScriptLayout'
 import './ScriptScenes.css'

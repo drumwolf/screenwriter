@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { createScript, deleteScript, listScripts } from '../api/scripts'
-import type { Script } from '../api/types'
+import { createScript, deleteScript, listScripts, type Script } from '../api'
 import '../App.css'
 
 function ProjectList() {

@@ -2,12 +2,16 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
 import {
   createCharacter,
+  createEntry,
+  deleteEntry as deleteEntryApi,
   listCharacters,
+  listEntries,
   reorderCharacters,
   updateCharacter,
-} from '../api/characters'
-import { createEntry, deleteEntry as deleteEntryApi, listEntries, updateEntry } from '../api/characterEntries'
-import type { Character, CharacterEntry } from '../api/types'
+  updateEntry,
+  type Character,
+  type CharacterEntry,
+} from '../api'
 import ExpandableTextField from '../components/ExpandableTextField'
 import type { ScriptLayoutContext } from './ScriptLayout'
 import './ScriptCharacters.css'
