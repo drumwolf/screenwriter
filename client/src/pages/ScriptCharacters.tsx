@@ -1,26 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
+import {
+  createCharacter,
+  listCharacters,
+  reorderCharacters,
+  updateCharacter,
+} from '../api/characters'
+import { createEntry, deleteEntry as deleteEntryApi, listEntries, updateEntry } from '../api/characterEntries'
+import type { Character, CharacterEntry } from '../api/types'
 import ExpandableTextField from '../components/ExpandableTextField'
 import type { ScriptLayoutContext } from './ScriptLayout'
 import './ScriptCharacters.css'
 import './SplitView.css'
-
-interface Character {
-  id: string
-  scriptId: string
-  name: string
-  note: string
-  orderIndex: number
-  createdAt: string
-}
-
-interface CharacterEntry {
-  id: string
-  characterId: string
-  content: string
-  source: 'manual' | 'auto'
-  createdAt: string
-}
 
 const NEW_CHARACTER = 'new' as const
 
@@ -42,9 +33,8 @@ function ScriptCharacters() {
   useEffect(() => {
     if (!id) return
 
-    fetch(`/api/scripts/${id}/characters`)
-      .then((res) => res.json())
-      .then((data: Character[]) => {
+    listCharacters(id)
+      .then((data) => {
         setCharacters(data)
         setSelection(data.length > 0 ? data[0].id : NEW_CHARACTER)
       })
@@ -69,9 +59,7 @@ function ScriptCharacters() {
       return
     }
 
-    fetch(`/api/scripts/${id}/characters/${selectedCharacter.id}/entries`)
-      .then((res) => res.json())
-      .then((data: CharacterEntry[]) => setEntries(data))
+    listEntries(id, selectedCharacter.id).then((data) => setEntries(data))
   }, [id, selectedCharacter])
 
   async function handleCreateCharacter(e: FormEvent<HTMLFormElement>) {
@@ -86,14 +74,9 @@ function ScriptCharacters() {
 
     setCreatingCharacter(true)
     try {
-      const res = await fetch(`/api/scripts/${id}/characters`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, note }),
-      })
-      if (!res.ok) return
+      const character = await createCharacter(id, name, note)
+      if (!character) return
 
-      const character: Character = await res.json()
       setCharacters((prev) => [...prev, character])
       setSelection(character.id)
       form.reset()
@@ -108,14 +91,9 @@ function ScriptCharacters() {
     if (field === 'name' && !trimmed) return
     if (trimmed === selectedCharacter[field]) return
 
-    const res = await fetch(`/api/scripts/${id}/characters/${selectedCharacter.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [field]: trimmed }),
-    })
-    if (!res.ok) return
+    const updated = await updateCharacter(id, selectedCharacter.id, { [field]: trimmed })
+    if (!updated) return
 
-    const updated: Character = await res.json()
     setCharacters((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
   }
 
@@ -127,14 +105,9 @@ function ScriptCharacters() {
 
     setAddingEntry(true)
     try {
-      const res = await fetch(`/api/scripts/${id}/characters/${selectedCharacter.id}/entries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      })
-      if (!res.ok) return
+      const entry = await createEntry(id, selectedCharacter.id, content)
+      if (!entry) return
 
-      const entry: CharacterEntry = await res.json()
       setEntries((prev) => [...prev, entry])
       setNewEntry('')
     } finally {
@@ -148,28 +121,17 @@ function ScriptCharacters() {
     const trimmed = content.trim()
     if (!original || !trimmed || trimmed === original.content) return
 
-    const res = await fetch(
-      `/api/scripts/${id}/characters/${selectedCharacter.id}/entries/${entryId}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: trimmed }),
-      },
-    )
-    if (!res.ok) return
+    const updated = await updateEntry(id, selectedCharacter.id, entryId, trimmed)
+    if (!updated) return
 
-    const updated: CharacterEntry = await res.json()
     setEntries((prev) => prev.map((entry) => (entry.id === updated.id ? updated : entry)))
   }
 
   async function deleteEntry(entryId: string) {
     if (!id || !selectedCharacter) return
 
-    const res = await fetch(
-      `/api/scripts/${id}/characters/${selectedCharacter.id}/entries/${entryId}`,
-      { method: 'DELETE' },
-    )
-    if (!res.ok) return
+    const ok = await deleteEntryApi(id, selectedCharacter.id, entryId)
+    if (!ok) return
 
     setEntries((prev) => prev.filter((entry) => entry.id !== entryId))
   }
@@ -184,14 +146,9 @@ function ScriptCharacters() {
     ;[reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]]
     setCharacters(reordered)
 
-    const res = await fetch(`/api/scripts/${id}/characters/order`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ characterIds: reordered.map((character) => character.id) }),
-    })
-    if (!res.ok) return
+    const updated = await reorderCharacters(id, reordered.map((character) => character.id))
+    if (!updated) return
 
-    const updated: Character[] = await res.json()
     setCharacters(updated)
   }
 

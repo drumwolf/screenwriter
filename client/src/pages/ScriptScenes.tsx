@@ -1,35 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
+import {
+  checkSceneConsistency,
+  createScene,
+  draftScene,
+  getSceneCharacters,
+  listScenes,
+  reorderScenes,
+  setSceneCharacters,
+  updateScene,
+} from '../api/scenes'
+import { listCharacters } from '../api/characters'
+import type { Character, ConsistencyIssue, Scene } from '../api/types'
 import ExpandableTextField from '../components/ExpandableTextField'
 import type { ScriptLayoutContext } from './ScriptLayout'
 import './ScriptScenes.css'
 import './SplitView.css'
-
-interface Scene {
-  id: string
-  scriptId: string
-  heading: string
-  title: string
-  actionContext: string
-  subtext: string
-  draft: string
-  orderIndex: number
-  createdAt: string
-}
-
-interface Character {
-  id: string
-  scriptId: string
-  name: string
-  note: string
-  createdAt: string
-}
-
-interface ConsistencyIssue {
-  character: string
-  detail: string
-  explanation: string
-}
 
 const NEW_SCENE = 'new' as const
 
@@ -53,11 +39,8 @@ function ScriptScenes() {
   useEffect(() => {
     if (!id) return
 
-    Promise.all([
-      fetch(`/api/scripts/${id}/scenes`).then((res) => res.json()),
-      fetch(`/api/scripts/${id}/characters`).then((res) => res.json()),
-    ])
-      .then(([sceneData, characterData]: [Scene[], Character[]]) => {
+    Promise.all([listScenes(id), listCharacters(id)])
+      .then(([sceneData, characterData]) => {
         setScenes(sceneData)
         setCharacters(characterData)
         setSelection(sceneData.length > 0 ? sceneData[0].id : NEW_SCENE)
@@ -83,9 +66,9 @@ function ScriptScenes() {
       return
     }
 
-    fetch(`/api/scripts/${id}/scenes/${selectedScene.id}/characters`)
-      .then((res) => res.json())
-      .then((linked: Character[]) => setLinkedCharacterIds(new Set(linked.map((c) => c.id))))
+    getSceneCharacters(id, selectedScene.id).then((linked) =>
+      setLinkedCharacterIds(new Set(linked.map((c) => c.id))),
+    )
   }, [id, selectedScene])
 
   async function handleCreateScene(e: FormEvent<HTMLFormElement>) {
@@ -100,14 +83,9 @@ function ScriptScenes() {
 
     setCreatingScene(true)
     try {
-      const res = await fetch(`/api/scripts/${id}/scenes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actionContext, subtext }),
-      })
-      if (!res.ok) return
+      const scene = await createScene(id, actionContext, subtext)
+      if (!scene) return
 
-      const scene: Scene = await res.json()
       setScenes((prev) => [...prev, scene])
       setSelection(scene.id)
       form.reset()
@@ -121,14 +99,9 @@ function ScriptScenes() {
     const trimmed = value.trim()
     if (!trimmed || trimmed === selectedScene[field]) return
 
-    const res = await fetch(`/api/scripts/${id}/scenes/${selectedScene.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [field]: trimmed }),
-    })
-    if (!res.ok) return
+    const updated = await updateScene(id, selectedScene.id, { [field]: trimmed })
+    if (!updated) return
 
-    const updated: Scene = await res.json()
     setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
     if (field === 'draft') setConsistencyIssues(null)
   }
@@ -144,11 +117,7 @@ function ScriptScenes() {
     }
     setLinkedCharacterIds(next)
 
-    await fetch(`/api/scripts/${id}/scenes/${selectedScene.id}/characters`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ characterIds: [...next] }),
-    })
+    await setSceneCharacters(id, selectedScene.id, [...next])
   }
 
   async function handleDraft() {
@@ -160,17 +129,14 @@ function ScriptScenes() {
     setConsistencyIssues(null)
     setScenes((prev) => prev.map((scene) => (scene.id === sceneId ? { ...scene, draft: '' } : scene)))
     try {
-      const res = await fetch(`/api/scripts/${id}/scenes/${sceneId}/draft`, {
-        method: 'POST',
-      })
-      if (!res.ok) {
+      const updated = await draftScene(id, sceneId)
+      if (!updated) {
         setScenes((prev) =>
           prev.map((scene) => (scene.id === sceneId ? { ...scene, draft: previousDraft } : scene)),
         )
         return
       }
 
-      const updated: Scene = await res.json()
       setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
     } finally {
       setDrafting(false)
@@ -187,14 +153,9 @@ function ScriptScenes() {
     ;[reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]]
     setScenes(reordered)
 
-    const res = await fetch(`/api/scripts/${id}/scenes/order`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sceneIds: reordered.map((scene) => scene.id) }),
-    })
-    if (!res.ok) return
+    const updated = await reorderScenes(id, reordered.map((scene) => scene.id))
+    if (!updated) return
 
-    const updated: Scene[] = await res.json()
     setScenes(updated)
   }
 
@@ -203,12 +164,8 @@ function ScriptScenes() {
 
     setChecking(true)
     try {
-      const res = await fetch(`/api/scripts/${id}/scenes/${selectedScene.id}/check-consistency`, {
-        method: 'POST',
-      })
-      if (!res.ok) return
-
-      const { issues }: { issues: ConsistencyIssue[] } = await res.json()
+      const issues = await checkSceneConsistency(id, selectedScene.id)
+      if (issues === null) return
       setConsistencyIssues(issues)
     } finally {
       setChecking(false)

@@ -1,13 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { createScript, deleteScript, listScripts } from '../api/scripts'
+import type { Script } from '../api/types'
 import '../App.css'
-
-interface Script {
-  id: string
-  title: string
-  sceneCount: number
-  lastEdited: string
-}
 
 function ProjectList() {
   const [scripts, setScripts] = useState<Script[]>([])
@@ -17,8 +12,7 @@ function ProjectList() {
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
-    fetch('/api/scripts')
-      .then((res) => res.json())
+    listScripts()
       .then((data) => setScripts(data))
       .catch(() => setError(true))
       .finally(() => setLoading(false))
@@ -31,12 +25,7 @@ function ProjectList() {
 
     setCreating(true)
     try {
-      const res = await fetch('/api/scripts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
-      })
-      const script: Script = await res.json()
+      const script = await createScript(title)
       setScripts((prev) => [...prev, script])
       setNewTitle('')
     } catch {
@@ -52,8 +41,8 @@ function ProjectList() {
     )
     if (!confirmed) return
 
-    const res = await fetch(`/api/scripts/${script.id}`, { method: 'DELETE' })
-    if (!res.ok) return
+    const ok = await deleteScript(script.id)
+    if (!ok) return
 
     setScripts((prev) => prev.filter((s) => s.id !== script.id))
   }

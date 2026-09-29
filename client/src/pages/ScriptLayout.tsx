@@ -1,13 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
+import { getScript } from '../api/scripts'
+import type { Script } from '../api/types'
 import './ScriptLayout.css'
-
-interface Script {
-  id: string
-  title: string
-  sceneCount: number
-  lastEdited: string
-}
 
 export interface HeaderAction {
   label: string
@@ -28,12 +23,8 @@ function ScriptLayout() {
   useEffect(() => {
     if (!id) return
 
-    fetch(`/api/scripts/${id}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('not found')
-        return res.json()
-      })
-      .then((data: Script) => setScript(data))
+    getScript(id)
+      .then((data) => setScript(data))
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [id])
