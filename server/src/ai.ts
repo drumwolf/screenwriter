@@ -1,6 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-export const anthropic = new Anthropic();
+const anthropic = new Anthropic();
+
+export async function checkClaudeHealth(): Promise<string> {
+  const response = await anthropic.messages.create({
+    model: "claude-opus-5",
+    max_tokens: 32,
+    messages: [
+      { role: "user", content: "Reply with just the word: ok" },
+    ],
+  });
+
+  return response.content.find((block) => block.type === "text")?.text?.trim() ?? "";
+}
 
 const HEADING_FALLBACK = "UNTITLED SCENE";
 const TITLE_FALLBACK = "Untitled";
