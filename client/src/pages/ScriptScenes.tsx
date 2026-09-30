@@ -5,12 +5,10 @@ import {
   createScene,
   draftScene,
   getSceneCharacters,
-  listCharacters,
   listScenes,
   reorderScenes,
   setSceneCharacters,
   updateScene,
-  type Character,
   type ConsistencyIssue,
   type Scene,
 } from '../api'
@@ -23,7 +21,7 @@ const NEW_SCENE = 'new' as const
 
 function ScriptScenes() {
   const { id } = useParams<{ id: string }>()
-  const { setHeaderAction } = useOutletContext<ScriptLayoutContext>()
+  const { setHeaderAction, characters } = useOutletContext<ScriptLayoutContext>()
   const [scenes, setScenes] = useState<Scene[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -32,7 +30,6 @@ function ScriptScenes() {
   const [headingDraft, setHeadingDraft] = useState('')
   const [creatingScene, setCreatingScene] = useState(false)
   const [drafting, setDrafting] = useState(false)
-  const [characters, setCharacters] = useState<Character[]>([])
   const [linkedCharacterIds, setLinkedCharacterIds] = useState<Set<string>>(new Set())
   const [copied, setCopied] = useState(false)
   const [checking, setChecking] = useState(false)
@@ -41,10 +38,9 @@ function ScriptScenes() {
   useEffect(() => {
     if (!id) return
 
-    Promise.all([listScenes(id), listCharacters(id)])
-      .then(([sceneData, characterData]) => {
+    listScenes(id)
+      .then((sceneData) => {
         setScenes(sceneData)
-        setCharacters(characterData)
         setSelection(sceneData.length > 0 ? sceneData[0].id : NEW_SCENE)
       })
       .catch(() => setError(true))

@@ -4,12 +4,10 @@ import {
   createCharacter,
   createEntry,
   deleteEntry as deleteEntryApi,
-  listCharacters,
   listEntries,
   reorderCharacters,
   updateCharacter,
   updateEntry,
-  type Character,
   type CharacterEntry,
 } from '../api'
 import ExpandableTextField from '../components/ExpandableTextField'
@@ -21,11 +19,10 @@ const NEW_CHARACTER = 'new' as const
 
 function ScriptCharacters() {
   const { id } = useParams<{ id: string }>()
-  const { setHeaderAction } = useOutletContext<ScriptLayoutContext>()
-  const [characters, setCharacters] = useState<Character[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-  const [selection, setSelection] = useState<string | typeof NEW_CHARACTER | null>(null)
+  const { setHeaderAction, characters, setCharacters } = useOutletContext<ScriptLayoutContext>()
+  const [selection, setSelection] = useState<string | typeof NEW_CHARACTER | null>(
+    characters.length > 0 ? characters[0].id : NEW_CHARACTER,
+  )
 
   const [entries, setEntries] = useState<CharacterEntry[]>([])
   const [nameDraft, setNameDraft] = useState('')
@@ -33,18 +30,6 @@ function ScriptCharacters() {
   const [newEntry, setNewEntry] = useState('')
   const [creatingCharacter, setCreatingCharacter] = useState(false)
   const [addingEntry, setAddingEntry] = useState(false)
-
-  useEffect(() => {
-    if (!id) return
-
-    listCharacters(id)
-      .then((data) => {
-        setCharacters(data)
-        setSelection(data.length > 0 ? data[0].id : NEW_CHARACTER)
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false))
-  }, [id])
 
   const selectedCharacter = characters.find((c) => c.id === selection) ?? null
 
@@ -155,9 +140,6 @@ function ScriptCharacters() {
 
     setCharacters(updated)
   }
-
-  if (loading) return <p className="split-main">Loading…</p>
-  if (error) return <p className="split-main" role="alert">Couldn't load characters.</p>
 
   return (
     <div className="split-view">

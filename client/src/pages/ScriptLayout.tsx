@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { Link, NavLink, Outlet, useParams } from 'react-router-dom'
-import { getScript, type Script } from '../api'
+import { getScript, listCharacters, type Character, type Script } from '../api'
 import './ScriptLayout.css'
 
 export interface HeaderAction {
@@ -10,6 +10,8 @@ export interface HeaderAction {
 
 export interface ScriptLayoutContext {
   setHeaderAction: (action: HeaderAction | null) => void
+  characters: Character[]
+  setCharacters: Dispatch<SetStateAction<Character[]>>
 }
 
 function ScriptLayout() {
@@ -18,12 +20,16 @@ function ScriptLayout() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [headerAction, setHeaderAction] = useState<HeaderAction | null>(null)
+  const [characters, setCharacters] = useState<Character[]>([])
 
   useEffect(() => {
     if (!id) return
 
-    getScript(id)
-      .then((data) => setScript(data))
+    Promise.all([getScript(id), listCharacters(id)])
+      .then(([scriptData, characterData]) => {
+        setScript(scriptData)
+        setCharacters(characterData)
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [id])
@@ -55,7 +61,7 @@ function ScriptLayout() {
         </div>
       </header>
 
-      <Outlet context={{ setHeaderAction } satisfies ScriptLayoutContext} />
+      <Outlet context={{ setHeaderAction, characters, setCharacters } satisfies ScriptLayoutContext} />
     </div>
   )
 }
