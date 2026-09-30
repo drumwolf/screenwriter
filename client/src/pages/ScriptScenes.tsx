@@ -33,6 +33,7 @@ function ScriptScenes() {
   const [linkedCharacterIds, setLinkedCharacterIds] = useState<Set<string>>(new Set())
   const [copied, setCopied] = useState(false)
   const [checking, setChecking] = useState(false)
+  const [checkFailed, setCheckFailed] = useState(false)
   const [consistencyIssues, setConsistencyIssues] = useState<ConsistencyIssue[] | null>(null)
 
   useEffect(() => {
@@ -58,6 +59,7 @@ function ScriptScenes() {
     setTitleDraft(selectedScene?.title ?? '')
     setHeadingDraft(selectedScene?.heading ?? '')
     setConsistencyIssues(null)
+    setCheckFailed(false)
 
     if (!id || !selectedScene) {
       setLinkedCharacterIds(new Set())
@@ -101,7 +103,10 @@ function ScriptScenes() {
     if (!updated) return
 
     setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
-    if (field === 'draft') setConsistencyIssues(null)
+    if (field === 'draft') {
+      setConsistencyIssues(null)
+      setCheckFailed(false)
+    }
   }
 
   async function toggleCharacter(characterId: string) {
@@ -125,6 +130,7 @@ function ScriptScenes() {
 
     setDrafting(true)
     setConsistencyIssues(null)
+    setCheckFailed(false)
     setScenes((prev) => prev.map((scene) => (scene.id === sceneId ? { ...scene, draft: '' } : scene)))
     try {
       const updated = await draftScene(id, sceneId)
@@ -161,9 +167,14 @@ function ScriptScenes() {
     if (!id || !selectedScene?.draft) return
 
     setChecking(true)
+    setCheckFailed(false)
     try {
       const issues = await checkSceneConsistency(id, selectedScene.id)
-      if (issues === null) return
+      if (issues === null) {
+        setConsistencyIssues(null)
+        setCheckFailed(true)
+        return
+      }
       setConsistencyIssues(issues)
     } finally {
       setChecking(false)
@@ -347,6 +358,13 @@ function ScriptScenes() {
                   value={selectedScene.draft}
                   onSave={(v) => saveField('draft', v)}
                 />
+              </div>
+            )}
+
+            {checkFailed && (
+              <div className="scene-field">
+                <h3>Consistency Check</h3>
+                <p role="alert">The consistency check failed. Try again.</p>
               </div>
             )}
 
