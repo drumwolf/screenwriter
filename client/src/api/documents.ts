@@ -1,4 +1,4 @@
-import type { ScriptDocument } from './types'
+import type { CharacterProposal, ScriptDocument } from './types'
 
 export async function listDocuments(scriptId: string): Promise<ScriptDocument[]> {
   const res = await fetch(`/api/scripts/${scriptId}/documents`)
@@ -24,4 +24,15 @@ export async function deleteDocument(scriptId: string, documentId: string): Prom
     method: 'DELETE',
   })
   return res.ok
+}
+
+export async function proposeCharacters(
+  scriptId: string,
+  documentId: string,
+): Promise<{ proposals: CharacterProposal[]; dropped: number } | null> {
+  const res = await fetch(`/api/scripts/${scriptId}/documents/${documentId}/propose-characters`, {
+    method: 'POST',
+  })
+  if (!res.ok) return null
+  return res.json()
 }

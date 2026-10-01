@@ -48,3 +48,10 @@ export interface ScriptDocument {
   content: string
   createdAt: string
 }
+
+export interface CharacterProposal {
+  characterId: string | null
+  name: string
+  note: string
+  passages: string[]
+}

@@ -68,9 +68,7 @@ export interface SceneCharacter {
   entries: string[];
 }
 
-function formatCharacters(characters: SceneCharacter[]): string {
-  if (characters.length === 0) return "";
-
+function formatCharacterBlocks(characters: SceneCharacter[]): string {
   const blocks = characters.map((character) => {
     const lines = [`${character.name}${character.note ? ` — ${character.note}` : ""}`];
     for (const entry of character.entries) {
@@ -79,11 +77,17 @@ function formatCharacters(characters: SceneCharacter[]): string {
     return lines.join("\n");
   });
 
+  return blocks.join("\n\n");
+}
+
+function formatCharacters(characters: SceneCharacter[]): string {
+  if (characters.length === 0) return "";
+
   return (
     "\n\nCHARACTERS IN THIS SCENE (use these exact names; stay consistent with " +
     "these established details — they take priority over anything you'd " +
     "otherwise assume about the character):\n" +
-    blocks.join("\n\n")
+    formatCharacterBlocks(characters)
   );
 }
 
@@ -236,4 +240,83 @@ export async function checkConsistency(params: {
   }
 
   return response.parsed_output.issues;
+}
+
+const CharacterProposalSchema = z.object({
+  character: z
+    .string()
+    .describe(
+      "The character's name. For a character already in the list you were given, " +
+        "use that exact name, even if the document calls them something else.",
+    ),
+  isNew: z.boolean().describe("True if this character isn't in the list you were given."),
+  note: z
+    .string()
+    .describe(
+      "For a new character only: a one-line note on who they are in the story " +
+        "(e.g. \"David's best friend in high school\"). Empty for existing characters.",
+    ),
+  passages: z
+    .array(z.string())
+    .describe(
+      "Passages copied exactly, character for character, from the document — " +
+        "never paraphrased, summarized, or stitched together from separate places.",
+    ),
+});
+
+const CharacterProposalsSchema = z.object({
+  proposals: z
+    .array(CharacterProposalSchema)
+    .describe("One item per character with something to add; an empty array if nothing."),
+});
+
+export type CharacterProposal = z.infer<typeof CharacterProposalSchema>;
+
+function formatNotebook(characters: SceneCharacter[]): string {
+  if (characters.length === 0) return "\n\nNo characters are in the notebook yet.";
+
+  return "\n\nCHARACTERS ALREADY IN THE NOTEBOOK:\n" + formatCharacterBlocks(characters);
+}
+
+export async function proposeCharacters(params: {
+  documentName: string;
+  document: string;
+  characters: SceneCharacter[];
+}): Promise<CharacterProposal[]> {
+  const stream = anthropic.messages.stream({
+    model: "claude-opus-5",
+    max_tokens: 64000,
+    system:
+      "A screenwriter keeps a notebook for each character in their script, built " +
+      "from their own notes. You're given one of their source documents (bios, " +
+      "treatments, notes) and the characters already in the notebook with what's " +
+      "stored for each. Find passages in the document that establish lasting facts " +
+      "about a character — background, history, personality, relationships, tastes, " +
+      "habits — and propose them as notebook entries, in the writer's own words.\n\n" +
+      "Each passage must be copied exactly from the document: a self-contained " +
+      "paragraph, list, or section, never cut off mid-sentence. If a passage is " +
+      "mostly about one character, propose it for that character only.\n\n" +
+      "Skip: anything already stored for that character; plot narration of what " +
+      "happens in a particular scene; finished scenes written in screenplay or " +
+      "dialogue form; minor characters who are only mentioned in passing.",
+    messages: [
+      {
+        role: "user",
+        content:
+          `DOCUMENT: ${params.documentName}\n${params.document}` +
+          formatNotebook(params.characters),
+      },
+    ],
+    output_config: { format: zodOutputFormat(CharacterProposalsSchema) },
+  });
+
+  const response = await stream.finalMessage();
+
+  // Throw rather than return [] so a failed run can't be mistaken for
+  // "nothing to propose" — the route turns this into a 502.
+  if (!response.parsed_output) {
+    throw new Error(`character proposals returned no result (stop_reason: ${response.stop_reason})`);
+  }
+
+  return response.parsed_output.proposals;
 }
