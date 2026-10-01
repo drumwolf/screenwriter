@@ -91,13 +91,18 @@ export interface EarlierScene {
   title: string;
   content: string;
   isDraft: boolean;
+  writtenByUser: boolean;
 }
 
 function formatEarlierScenes(scenes: EarlierScene[]): string {
   if (scenes.length === 0) return "";
 
   const blocks = scenes.map((scene, index) => {
-    const kind = scene.isDraft ? "drafted scene" : "planned premise, not yet drafted";
+    const kind = scene.writtenByUser
+      ? "scene written by the screenwriter"
+      : scene.isDraft
+        ? "drafted scene"
+        : "planned premise, not yet drafted";
     return `${index + 1}. ${scene.title} (${scene.heading}) — ${kind}:\n${scene.content}`;
   });
 
@@ -109,13 +114,48 @@ function formatEarlierScenes(scenes: EarlierScene[]): string {
   );
 }
 
+export interface StyleReferenceScene {
+  heading: string;
+  title: string;
+  content: string;
+}
+
+function formatLaterUserScenes(scenes: StyleReferenceScene[]): string {
+  if (scenes.length === 0) return "";
+
+  const blocks = scenes.map((scene) => `${scene.title} (${scene.heading}):\n${scene.content}`);
+
+  return (
+    "\n\nSCENES WRITTEN BY THE SCREENWRITER, LATER IN THE SCRIPT (style reference " +
+    "only — these haven't happened yet at this point in the story):\n" +
+    blocks.join("\n\n")
+  );
+}
+
+// Testing showed that an example of the writer's own dialogue improves drafts
+// far more than describing what natural dialogue sounds like, so scenes the
+// writer wrote themselves are offered as the voice to match.
+const WRITER_STYLE_INSTRUCTION =
+  "\n\nSome scenes in this script were written by the screenwriter themselves — " +
+  "they're marked \"written by the screenwriter\" among the earlier scenes, or " +
+  "listed separately if they come later in the story. Treat them as the voice to " +
+  "match: how these people talk — the rhythm, the plainness, the register, how the " +
+  "teasing works. Don't reuse their lines or jokes, and don't refer to events from " +
+  "scenes that come later in the story.";
+
 export async function draftScene(params: {
   heading: string;
   actionContext: string;
   subtext: string;
   characters?: SceneCharacter[];
   earlierScenes?: EarlierScene[];
+  laterUserScenes?: StyleReferenceScene[];
 }): Promise<string> {
+  const earlierScenes = params.earlierScenes ?? [];
+  const laterUserScenes = params.laterUserScenes ?? [];
+  const hasWriterScenes =
+    laterUserScenes.length > 0 || earlierScenes.some((scene) => scene.writtenByUser);
+
   const response = await anthropic.messages.create({
     model: "claude-opus-5",
     max_tokens: 4096,
@@ -126,7 +166,8 @@ export async function draftScene(params: {
       "subtext — what's really going on underneath, unspoken — and, when " +
       "available, established details about the characters in the scene and " +
       "the earlier scenes in the script. Write only the scene itself, nothing " +
-      "else — no preamble, no notes.",
+      "else — no preamble, no notes." +
+      (hasWriterScenes ? WRITER_STYLE_INSTRUCTION : ""),
     messages: [
       {
         role: "user",
@@ -135,7 +176,8 @@ export async function draftScene(params: {
           `ACTION/CONTEXT: ${params.actionContext}\n\n` +
           `SUBTEXT: ${params.subtext}` +
           formatCharacters(params.characters ?? []) +
-          formatEarlierScenes(params.earlierScenes ?? []),
+          formatEarlierScenes(earlierScenes) +
+          formatLaterUserScenes(laterUserScenes),
       },
     ],
   });

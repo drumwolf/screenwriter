@@ -150,3 +150,18 @@
   color: var(--text-h);
   cursor: pointer;
 }
+
+.written-by-user {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-h);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.written-by-user-hint {
+  color: var(--text);
+  font-size: 0.8rem;
+}

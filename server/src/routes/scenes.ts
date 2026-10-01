@@ -6,6 +6,7 @@ import {
   generateSceneMeta,
   type EarlierScene,
   type SceneCharacter,
+  type StyleReferenceScene,
 } from "../ai.js";
 import { db } from "../db.js";
 
@@ -19,10 +20,18 @@ interface Scene {
   draft: string;
   orderIndex: number;
   createdAt: string;
+  writtenByUser: boolean;
+}
+
+// SQLite has no boolean type, so written_by_user comes back as 0/1.
+type SceneRow = Omit<Scene, "writtenByUser"> & { writtenByUser: number };
+
+function toScene(row: SceneRow): Scene {
+  return { ...row, writtenByUser: row.writtenByUser === 1 };
 }
 
 const SCENE_COLUMNS =
-  "id, script_id AS scriptId, heading, title, action_context AS actionContext, subtext, draft, order_index AS orderIndex, created_at AS createdAt";
+  "id, script_id AS scriptId, heading, title, action_context AS actionContext, subtext, draft, order_index AS orderIndex, created_at AS createdAt, written_by_user AS writtenByUser";
 
 export const scenesRouter = Router({ mergeParams: true });
 
@@ -30,9 +39,9 @@ scenesRouter.get("/", (req, res) => {
   const { scriptId } = req.params as { scriptId: string };
   const scenes = db
     .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE script_id = ? ORDER BY order_index ASC`)
-    .all(scriptId) as Scene[];
+    .all(scriptId) as SceneRow[];
 
-  res.json(scenes);
+  res.json(scenes.map(toScene));
 });
 
 scenesRouter.put("/order", (req, res) => {
@@ -66,9 +75,9 @@ scenesRouter.put("/order", (req, res) => {
 
   const scenes = db
     .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE script_id = ? ORDER BY order_index ASC`)
-    .all(scriptId) as Scene[];
+    .all(scriptId) as SceneRow[];
 
-  res.json(scenes);
+  res.json(scenes.map(toScene));
 });
 
 scenesRouter.post("/", async (req, res) => {
@@ -113,6 +122,7 @@ scenesRouter.post("/", async (req, res) => {
     draft: "",
     orderIndex,
     createdAt: now,
+    writtenByUser: false,
   };
 
   db.prepare(
@@ -146,9 +156,17 @@ const EDITABLE_FIELDS: Record<string, string> = {
 scenesRouter.patch("/:id", (req, res) => {
   const { scriptId, id } = req.params as { scriptId: string; id: string };
   const updates = Object.entries(EDITABLE_FIELDS).filter(([field]) => req.body[field] !== undefined);
+  const { writtenByUser } = req.body;
 
-  if (updates.length === 0) {
-    res.status(400).json({ error: `at least one of ${Object.keys(EDITABLE_FIELDS).join(", ")} is required` });
+  if (updates.length === 0 && writtenByUser === undefined) {
+    res.status(400).json({
+      error: `at least one of ${[...Object.keys(EDITABLE_FIELDS), "writtenByUser"].join(", ")} is required`,
+    });
+    return;
+  }
+
+  if (writtenByUser !== undefined && typeof writtenByUser !== "boolean") {
+    res.status(400).json({ error: "writtenByUser must be a boolean" });
     return;
   }
 
@@ -172,15 +190,18 @@ scenesRouter.patch("/:id", (req, res) => {
   for (const [field, column] of updates) {
     db.prepare(`UPDATE scenes SET ${column} = ? WHERE id = ?`).run(req.body[field].trim(), id);
   }
+  if (writtenByUser !== undefined) {
+    db.prepare("UPDATE scenes SET written_by_user = ? WHERE id = ?").run(writtenByUser ? 1 : 0, id);
+  }
 
   db.prepare("UPDATE scripts SET last_edited = ? WHERE id = ?").run(
     new Date().toISOString(),
     scriptId,
   );
 
-  const scene = db.prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE id = ?`).get(id) as Scene;
+  const scene = db.prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE id = ?`).get(id) as SceneRow;
 
-  res.json(scene);
+  res.json(toScene(scene));
 });
 
 function getSceneCharacters(sceneId: string): SceneCharacter[] {
@@ -208,7 +229,8 @@ function getSceneCharacters(sceneId: string): SceneCharacter[] {
 function getEarlierScenes(scriptId: string, orderIndex: number): EarlierScene[] {
   const scenes = db
     .prepare(
-      `SELECT heading, title, action_context AS actionContext, subtext, draft
+      `SELECT heading, title, action_context AS actionContext, subtext, draft,
+              written_by_user AS writtenByUser
        FROM scenes
        WHERE script_id = ? AND order_index < ?
        ORDER BY order_index ASC`,
@@ -219,12 +241,14 @@ function getEarlierScenes(scriptId: string, orderIndex: number): EarlierScene[] 
     actionContext: string;
     subtext: string;
     draft: string;
+    writtenByUser: number;
   }[];
 
   return scenes.map((scene) => ({
     heading: scene.heading,
     title: scene.title,
     isDraft: scene.draft !== "",
+    writtenByUser: scene.writtenByUser === 1 && scene.draft !== "",
     content:
       scene.draft !== ""
         ? scene.draft
@@ -232,12 +256,26 @@ function getEarlierScenes(scriptId: string, orderIndex: number): EarlierScene[] 
   }));
 }
 
+// Scenes the writer wrote themselves that come later in the story than the
+// scene being drafted. Earlier ones already reach the prompt via
+// getEarlierScenes, so they aren't repeated here.
+function getLaterUserScenes(scriptId: string, orderIndex: number): StyleReferenceScene[] {
+  return db
+    .prepare(
+      `SELECT heading, title, draft AS content
+       FROM scenes
+       WHERE script_id = ? AND order_index > ? AND written_by_user = 1 AND draft != ''
+       ORDER BY order_index ASC`,
+    )
+    .all(scriptId, orderIndex) as StyleReferenceScene[];
+}
+
 scenesRouter.post("/:id/draft", async (req, res) => {
   const { scriptId, id } = req.params as { scriptId: string; id: string };
 
   const scene = db
     .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE id = ? AND script_id = ?`)
-    .get(id, scriptId) as Scene | undefined;
+    .get(id, scriptId) as SceneRow | undefined;
 
   if (!scene) {
     res.status(404).json({ error: "scene not found" });
@@ -251,15 +289,17 @@ scenesRouter.post("/:id/draft", async (req, res) => {
       subtext: scene.subtext,
       characters: getSceneCharacters(id),
       earlierScenes: getEarlierScenes(scriptId, scene.orderIndex),
+      laterUserScenes: getLaterUserScenes(scriptId, scene.orderIndex),
     });
 
-    db.prepare("UPDATE scenes SET draft = ? WHERE id = ?").run(draft, id);
+    // The new draft is AI-written, so the scene is no longer the writer's own.
+    db.prepare("UPDATE scenes SET draft = ?, written_by_user = 0 WHERE id = ?").run(draft, id);
     db.prepare("UPDATE scripts SET last_edited = ? WHERE id = ?").run(
       new Date().toISOString(),
       scriptId,
     );
 
-    res.json({ ...scene, draft });
+    res.json({ ...toScene(scene), draft, writtenByUser: false });
   } catch (err) {
     res.status(502).json({ error: (err as Error).message });
   }
@@ -270,7 +310,7 @@ scenesRouter.post("/:id/check-consistency", async (req, res) => {
 
   const scene = db
     .prepare(`SELECT ${SCENE_COLUMNS} FROM scenes WHERE id = ? AND script_id = ?`)
-    .get(id, scriptId) as Scene | undefined;
+    .get(id, scriptId) as SceneRow | undefined;
 
   if (!scene) {
     res.status(404).json({ error: "scene not found" });

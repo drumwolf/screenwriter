@@ -38,6 +38,9 @@ if (!sceneColumns.some((col) => col.name === "title")) {
 if (!sceneColumns.some((col) => col.name === "draft")) {
   db.exec("ALTER TABLE scenes ADD COLUMN draft TEXT NOT NULL DEFAULT ''");
 }
+if (!sceneColumns.some((col) => col.name === "written_by_user")) {
+  db.exec("ALTER TABLE scenes ADD COLUMN written_by_user INTEGER NOT NULL DEFAULT 0");
+}
 if (!sceneColumns.some((col) => col.name === "order_index")) {
   db.exec("ALTER TABLE scenes ADD COLUMN order_index INTEGER NOT NULL DEFAULT 0");
 

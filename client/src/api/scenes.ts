@@ -22,7 +22,7 @@ export async function createScene(
 export async function updateScene(
   scriptId: string,
   sceneId: string,
-  fields: Partial<Pick<Scene, 'title' | 'heading' | 'actionContext' | 'subtext' | 'draft'>>,
+  fields: Partial<Pick<Scene, 'title' | 'heading' | 'actionContext' | 'subtext' | 'draft' | 'writtenByUser'>>,
 ): Promise<Scene | null> {
   const res = await fetch(`/api/scripts/${scriptId}/scenes/${sceneId}`, {
     method: 'PATCH',

@@ -15,6 +15,7 @@ export interface Scene {
   draft: string
   orderIndex: number
   createdAt: string
+  writtenByUser: boolean
 }
 
 export interface Character {

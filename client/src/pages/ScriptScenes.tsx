@@ -125,6 +125,12 @@ function ScriptScenes() {
 
   async function handleDraft() {
     if (!id || !selectedScene) return
+    if (
+      selectedScene.writtenByUser &&
+      !window.confirm('This scene is marked as written by you. Redrafting will replace your text with an AI draft. Are you sure?')
+    ) {
+      return
+    }
     const sceneId = selectedScene.id
     const previousDraft = selectedScene.draft
 
@@ -145,6 +151,15 @@ function ScriptScenes() {
     } finally {
       setDrafting(false)
     }
+  }
+
+  async function toggleWrittenByUser() {
+    if (!id || !selectedScene) return
+
+    const updated = await updateScene(id, selectedScene.id, { writtenByUser: !selectedScene.writtenByUser })
+    if (!updated) return
+
+    setScenes((prev) => prev.map((scene) => (scene.id === updated.id ? updated : scene)))
   }
 
   async function moveScene(sceneId: string, direction: -1 | 1) {
@@ -358,6 +373,15 @@ function ScriptScenes() {
                   value={selectedScene.draft}
                   onSave={(v) => saveField('draft', v)}
                 />
+                <label className="written-by-user">
+                  <input
+                    type="checkbox"
+                    checked={selectedScene.writtenByUser}
+                    onChange={toggleWrittenByUser}
+                  />
+                  Written by me
+                  <span className="written-by-user-hint">used as a style reference when drafting other scenes</span>
+                </label>
               </div>
             )}
 
