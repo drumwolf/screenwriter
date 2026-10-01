@@ -29,6 +29,7 @@ function ScriptScenes() {
   const [titleDraft, setTitleDraft] = useState('')
   const [headingDraft, setHeadingDraft] = useState('')
   const [creatingScene, setCreatingScene] = useState(false)
+  const [hasPastedScene, setHasPastedScene] = useState(false)
   const [drafting, setDrafting] = useState(false)
   const [linkedCharacterIds, setLinkedCharacterIds] = useState<Set<string>>(new Set())
   const [copied, setCopied] = useState(false)
@@ -79,16 +80,18 @@ function ScriptScenes() {
     const formData = new FormData(form)
     const actionContext = String(formData.get('actionContext') ?? '').trim()
     const subtext = String(formData.get('subtext') ?? '').trim()
-    if (!actionContext || !subtext) return
+    const draft = String(formData.get('draft') ?? '').trim()
+    if (!draft && (!actionContext || !subtext)) return
 
     setCreatingScene(true)
     try {
-      const scene = await createScene(id, actionContext, subtext)
+      const scene = await createScene(id, { actionContext, subtext, draft })
       if (!scene) return
 
       setScenes((prev) => [...prev, scene])
       setSelection(scene.id)
       form.reset()
+      setHasPastedScene(false)
     } finally {
       setCreatingScene(false)
     }
@@ -247,22 +250,31 @@ function ScriptScenes() {
       <section className="split-main">
         {selection === NEW_SCENE && (
           <form onSubmit={handleCreateScene} className="new-scene-form">
-            <label htmlFor="actionContext">Action / context</label>
+            <label htmlFor="actionContext">Action / context{hasPastedScene && ' (optional)'}</label>
             <textarea
               id="actionContext"
               name="actionContext"
               placeholder="What's physically happening in this scene?"
               rows={3}
-              required
+              required={!hasPastedScene}
             />
 
-            <label htmlFor="subtext">Subtext</label>
+            <label htmlFor="subtext">Subtext{hasPastedScene && ' (optional)'}</label>
             <textarea
               id="subtext"
               name="subtext"
               placeholder="What's really going on underneath, unspoken?"
               rows={3}
-              required
+              required={!hasPastedScene}
+            />
+
+            <label htmlFor="draft">Already written? Paste your scene (optional)</label>
+            <textarea
+              id="draft"
+              name="draft"
+              placeholder="Paste a scene you've written yourself. It's saved as the draft and marked as written by you."
+              rows={6}
+              onChange={(e) => setHasPastedScene(e.target.value.trim() !== '')}
             />
 
             <button type="submit" disabled={creatingScene}>

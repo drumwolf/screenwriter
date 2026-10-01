@@ -81,17 +81,27 @@ scenesRouter.put("/order", (req, res) => {
 });
 
 scenesRouter.post("/", async (req, res) => {
-  const { actionContext, subtext } = req.body;
+  const { actionContext = "", subtext = "", draft = "" } = req.body;
   const { scriptId } = req.params as { scriptId: string };
 
-  if (typeof actionContext !== "string" || actionContext.trim() === "") {
-    res.status(400).json({ error: "actionContext is required" });
+  if (typeof actionContext !== "string" || typeof subtext !== "string" || typeof draft !== "string") {
+    res.status(400).json({ error: "actionContext, subtext, and draft must be strings" });
     return;
   }
 
-  if (typeof subtext !== "string" || subtext.trim() === "") {
-    res.status(400).json({ error: "subtext is required" });
-    return;
+  // A pasted, already-written scene stands on its own, so the planning
+  // fields become optional. Without one, they're needed to draft from.
+  const trimmedDraft = draft.trim();
+  if (trimmedDraft === "") {
+    if (actionContext.trim() === "") {
+      res.status(400).json({ error: "actionContext is required" });
+      return;
+    }
+
+    if (subtext.trim() === "") {
+      res.status(400).json({ error: "subtext is required" });
+      return;
+    }
   }
 
   const script = db
@@ -104,7 +114,7 @@ scenesRouter.post("/", async (req, res) => {
   }
 
   const trimmedActionContext = actionContext.trim();
-  const { heading, title } = await generateSceneMeta(trimmedActionContext);
+  const { heading, title } = await generateSceneMeta(trimmedDraft || trimmedActionContext);
 
   const { maxOrder } = db
     .prepare("SELECT MAX(order_index) AS maxOrder FROM scenes WHERE script_id = ?")
@@ -119,14 +129,14 @@ scenesRouter.post("/", async (req, res) => {
     title,
     actionContext: trimmedActionContext,
     subtext: subtext.trim(),
-    draft: "",
+    draft: trimmedDraft,
     orderIndex,
     createdAt: now,
-    writtenByUser: false,
+    writtenByUser: trimmedDraft !== "",
   };
 
   db.prepare(
-    "INSERT INTO scenes (id, script_id, heading, title, action_context, subtext, order_index, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO scenes (id, script_id, heading, title, action_context, subtext, draft, order_index, created_at, written_by_user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
     scene.id,
     scene.scriptId,
@@ -134,8 +144,10 @@ scenesRouter.post("/", async (req, res) => {
     scene.title,
     scene.actionContext,
     scene.subtext,
+    scene.draft,
     scene.orderIndex,
     scene.createdAt,
+    scene.writtenByUser ? 1 : 0,
   );
 
   db.prepare(

@@ -40,8 +40,9 @@ export async function generateSceneMeta(actionContext: string): Promise<SceneMet
       model: "claude-haiku-4-5",
       max_tokens: 200,
       system:
-        "Given a description of what happens in a screenplay scene, give it a " +
-        "slugline heading and a short title.",
+        "Given a description of what happens in a screenplay scene, or the " +
+        "already-written scene itself, give it a slugline heading and a short " +
+        "title. If the scene already has a slugline, use that as the heading.",
       messages: [{ role: "user", content: actionContext }],
       output_config: { format: zodOutputFormat(SceneMetaSchema) },
     });

@@ -7,13 +7,12 @@ export async function listScenes(scriptId: string): Promise<Scene[]> {
 
 export async function createScene(
   scriptId: string,
-  actionContext: string,
-  subtext: string,
+  fields: { actionContext: string; subtext: string; draft?: string },
 ): Promise<Scene | null> {
   const res = await fetch(`/api/scripts/${scriptId}/scenes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ actionContext, subtext }),
+    body: JSON.stringify(fields),
   })
   if (!res.ok) return null
   return res.json()
