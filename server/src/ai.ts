@@ -38,7 +38,7 @@ export async function generateSceneMeta(actionContext: string): Promise<SceneMet
   try {
     const response = await anthropic.messages.parse({
       model: "claude-haiku-4-5",
-      max_tokens: 200,
+      max_tokens: 16000,
       system:
         "Given a description of what happens in a screenplay scene, or the " +
         "already-written scene itself, give it a slugline heading and a short " +
@@ -159,7 +159,7 @@ export async function draftScene(params: {
 
   const response = await anthropic.messages.create({
     model: "claude-opus-5",
-    max_tokens: 4096,
+    max_tokens: 16000,
     system:
       "You draft screenplay scenes: action lines and dialogue in standard " +
       "screenplay format (character names in caps above their lines). You're " +
@@ -213,7 +213,7 @@ export async function checkConsistency(params: {
 }): Promise<ConsistencyIssue[]> {
   const response = await anthropic.messages.parse({
     model: "claude-opus-5",
-    max_tokens: 2048,
+    max_tokens: 16000,
     system:
       "You check a drafted screenplay scene for contradictions against specific " +
       "established character details. You're given the scene's draft and, for each " +
