@@ -52,6 +52,9 @@ function ScriptLayout() {
             <NavLink to="characters" className={({ isActive }) => (isActive ? 'active' : '')}>
               Characters
             </NavLink>
+            <NavLink to="documents" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Documents
+            </NavLink>
           </nav>
           {headerAction && (
             <button type="button" className="header-action-button" onClick={headerAction.onClick}>

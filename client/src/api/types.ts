@@ -40,3 +40,11 @@ export interface ConsistencyIssue {
   detail: string
   explanation: string
 }
+
+export interface ScriptDocument {
+  id: string
+  scriptId: string
+  name: string
+  content: string
+  createdAt: string
+}

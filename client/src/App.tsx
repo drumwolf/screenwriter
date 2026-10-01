@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import ProjectList from './pages/ProjectList'
 import ScriptCharacters from './pages/ScriptCharacters'
+import ScriptDocuments from './pages/ScriptDocuments'
 import ScriptLayout from './pages/ScriptLayout'
 import ScriptScenes from './pages/ScriptScenes'
 
@@ -13,6 +14,7 @@ function App() {
           <Route index element={<Navigate to="scenes" replace />} />
           <Route path="scenes" element={<ScriptScenes />} />
           <Route path="characters" element={<ScriptCharacters />} />
+          <Route path="documents" element={<ScriptDocuments />} />
         </Route>
       </Routes>
     </BrowserRouter>

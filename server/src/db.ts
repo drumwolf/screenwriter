@@ -95,3 +95,13 @@ db.exec(`
     PRIMARY KEY (scene_id, character_id)
   )
 `);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS documents (
+    id TEXT PRIMARY KEY,
+    script_id TEXT NOT NULL REFERENCES scripts(id),
+    name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )
+`);
